@@ -131,6 +131,8 @@ export default function VistaSuelo({ cultivo: cultivoParam, area: areaParam }: {
               alSeleccionar={(id) => actualizarUrl({ area: id })}
               fechaCapas={fechaCapas}
               alTerminarLote={alTerminarLote}
+              cultivo={cultivo}
+              celdasLote={poligono ? (lote?.celdas ?? null) : null}
             />
           ) : (
             <div className="grid h-80 place-items-center rounded-2xl border border-borde bg-tarjeta text-sm text-texto-suave md:h-[28rem]">

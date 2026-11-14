@@ -4,7 +4,7 @@
 // Si /api/analisis o /api/ranking no existen todavía en el deploy, se cae a /api/recomendacion (contrato v0).
 import type { EstadoRecomendacion, Recomendacion } from "@/types/contratos";
 import type { Idioma } from "../idioma";
-import type { PoligonoGeoJSON } from "./MapaAreas";
+import type { CeldasGeoJSON, PoligonoGeoJSON } from "./MapaAreas";
 
 export type EstadoHumedad = "seco" | "bajo" | "optimo" | "humedo" | "saturado" | "sin_datos";
 
@@ -36,6 +36,7 @@ export interface ResultadoLote {
   lote: { hectareas: number; area_referencia?: { id: string; zona: string; dentro: boolean } | null; nota?: string };
   analisis: Analisis;
   sectores?: { humedad_m3m3?: { media: number } };
+  celdas?: CeldasGeoJSON | null; // sectores del lote para pintarlos en el mapa
 }
 
 /** Convierte la respuesta vieja (contrato v0) en un Analisis mínimo. */
