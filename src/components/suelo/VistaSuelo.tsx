@@ -131,11 +131,11 @@ export default function VistaSuelo({ cultivo: cultivoParam, area: areaParam }: {
           <p className="mt-5 text-xs font-semibold uppercase tracking-wider text-texto-suave">{t("recomendacion")}</p>
           {reco ? (
             <div
-              className="mt-2 rounded-xl p-4 text-white"
+              className={`mt-2 rounded-xl p-4 ${reco.estado === "esperar" ? "text-[#2b2410]" : "text-white"}`}
               style={{ background: `var(${TOKEN_ESTADO[reco.estado]})` }}
             >
               <p className="font-display text-2xl font-semibold">{t(`estado_${reco.estado}`)}</p>
-              <p className="mt-1 text-sm text-white/90">{reco.motivo}</p>
+              <p className="mt-1 text-sm opacity-90">{reco.motivo}</p>
             </div>
           ) : (
             <div className="mt-2 h-24 animate-pulse rounded-xl bg-tarjeta-2" />
