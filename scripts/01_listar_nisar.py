@@ -11,10 +11,10 @@ p.add_argument("--hasta", default="2026-11-14")
 args = p.parse_args()
 
 def tam_h5(prod):
-    for f in prod.umm.get("DataGranule", {}).get("ArchiveAndDistributionInformation", []):
-        if f.get("Name", "").endswith(".h5") and "QA" not in f["Name"]:
-            m = {"B": 1, "KB": 1e3, "MB": 1e6, "GB": 1e9}.get(f.get("SizeUnit", "B"), 1)
-            return f.get("Size", 0) * m
+    """Tamaño del .h5 principal (sin QA_STATS) según properties['bytes'] de asf_search."""
+    for nombre, info in (prod.properties.get("bytes") or {}).items():
+        if nombre.endswith(".h5") and "_QA_" not in nombre:
+            return info.get("bytes")
     return None
 
 salida = {}
