@@ -1,0 +1,18 @@
+{
+  "_estado": "SUPUESTO — umbrales provisionales SIN validar con agrónomos ni datos de campo de Itapúa. No usar para decisiones reales.",
+  "_fuente": "Elegidos por el equipo como punto de partida. Validar con MAG / técnicos de cooperativas antes de presentar como recomendación.",
+  "variable": "humedad_m3m3",
+  "unidad": "m3/m3 (humedad volumétrica superficial, ~0-5 cm)",
+  "ventana_dias": 10,
+  "_ventana_nota": "SUPUESTO: se usa el promedio de las observaciones válidas en los últimos N días.",
+  "reglas": [
+    { "estado": "precaucion", "etiqueta": "Precaución: suelo muy seco", "max": 0.15, "_nota": "SUPUESTO" },
+    { "estado": "esperar", "etiqueta": "Esperar: humedad baja", "min": 0.15, "max": 0.20, "_nota": "SUPUESTO" },
+    { "estado": "sembrar", "etiqueta": "Condición favorable para sembrar", "min": 0.20, "max": 0.40, "_nota": "SUPUESTO" },
+    { "estado": "precaucion", "etiqueta": "Precaución: suelo saturado / encharcado", "min": 0.40, "_nota": "SUPUESTO" }
+  ],
+  "calidad_minima": "buena",
+  "_calidad_nota": "SUPUESTO: observaciones con calidad 'dudosa' o 'sin_dato' no cuentan para la recomendación.",
+  "min_observaciones": 1,
+  "sin_datos": { "estado": "esperar", "etiqueta": "Sin datos recientes suficientes" }
+}

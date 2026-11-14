@@ -1,0 +1,158 @@
+{
+ "_aviso": "EJEMPLO FICTICIO — valores inventados para desarrollo, NO son datos NASA reales",
+ "zona": "Natalio",
+ "id": "natalio",
+ "bbox": [
+  -55.22,
+  -26.86,
+  -55.04,
+  -26.66
+ ],
+ "fuente": "EJEMPLO FICTICIO",
+ "serie": [
+  {
+   "fecha": "2026-06-19",
+   "humedad_m3m3": 0.278,
+   "hv_db": -17.1,
+   "calidad": "buena"
+  },
+  {
+   "fecha": "2026-06-24",
+   "humedad_m3m3": 0.271,
+   "hv_db": -17.1,
+   "calidad": "buena"
+  },
+  {
+   "fecha": "2026-06-28",
+   "humedad_m3m3": 0.319,
+   "hv_db": -16.0,
+   "calidad": "dudosa"
+  },
+  {
+   "fecha": "2026-07-03",
+   "humedad_m3m3": 0.329,
+   "hv_db": -15.8,
+   "calidad": "buena"
+  },
+  {
+   "fecha": "2026-07-11",
+   "humedad_m3m3": 0.321,
+   "hv_db": -15.1,
+   "calidad": "buena"
+  },
+  {
+   "fecha": "2026-07-15",
+   "humedad_m3m3": 0.355,
+   "hv_db": -14.9,
+   "calidad": "buena"
+  },
+  {
+   "fecha": "2026-07-22",
+   "humedad_m3m3": 0.313,
+   "hv_db": -14.7,
+   "calidad": "buena"
+  },
+  {
+   "fecha": "2026-07-26",
+   "humedad_m3m3": 0.313,
+   "hv_db": -15.6,
+   "calidad": "buena"
+  },
+  {
+   "fecha": "2026-08-02",
+   "humedad_m3m3": 0.32,
+   "hv_db": -14.9,
+   "calidad": "buena"
+  },
+  {
+   "fecha": "2026-08-10",
+   "humedad_m3m3": 0.255,
+   "hv_db": -17.2,
+   "calidad": "buena"
+  },
+  {
+   "fecha": "2026-08-17",
+   "humedad_m3m3": 0.261,
+   "hv_db": -16.4,
+   "calidad": "dudosa"
+  },
+  {
+   "fecha": "2026-08-22",
+   "humedad_m3m3": 0.251,
+   "hv_db": -16.2,
+   "calidad": "buena"
+  },
+  {
+   "fecha": "2026-08-26",
+   "humedad_m3m3": 0.21,
+   "hv_db": -18.1,
+   "calidad": "buena"
+  },
+  {
+   "fecha": "2026-08-31",
+   "humedad_m3m3": 0.197,
+   "hv_db": -18.8,
+   "calidad": "buena"
+  },
+  {
+   "fecha": "2026-09-04",
+   "humedad_m3m3": 0.207,
+   "hv_db": -18.6,
+   "calidad": "buena"
+  },
+  {
+   "fecha": "2026-09-09",
+   "humedad_m3m3": 0.201,
+   "hv_db": -18.6,
+   "calidad": "buena"
+  },
+  {
+   "fecha": "2026-09-14",
+   "humedad_m3m3": 0.224,
+   "hv_db": -17.1,
+   "calidad": "buena"
+  },
+  {
+   "fecha": "2026-09-19",
+   "humedad_m3m3": 0.249,
+   "hv_db": -16.5,
+   "calidad": "buena"
+  },
+  {
+   "fecha": "2026-09-23",
+   "humedad_m3m3": 0.233,
+   "hv_db": -16.7,
+   "calidad": "buena"
+  },
+  {
+   "fecha": "2026-09-30",
+   "humedad_m3m3": 0.256,
+   "hv_db": -16.8,
+   "calidad": "buena"
+  },
+  {
+   "fecha": "2026-10-08",
+   "humedad_m3m3": 0.275,
+   "hv_db": -17.0,
+   "calidad": "buena"
+  },
+  {
+   "fecha": "2026-10-15",
+   "humedad_m3m3": 0.331,
+   "hv_db": -15.1,
+   "calidad": "buena"
+  },
+  {
+   "fecha": "2026-10-22",
+   "humedad_m3m3": 0.314,
+   "hv_db": -14.6,
+   "calidad": "buena"
+  },
+  {
+   "fecha": "2026-10-26",
+   "humedad_m3m3": 0.354,
+   "hv_db": -13.8,
+   "calidad": "buena"
+  }
+ ]
+}
