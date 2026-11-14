@@ -108,6 +108,15 @@ body {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
+/* Ícono del botón de tema: luna en claro, sol en oscuro */
+.icono-sol { display: none; }
+:root[data-theme="dark"] .icono-sol { display: block; }
+:root[data-theme="dark"] .icono-luna { display: none; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .icono-sol { display: block; }
+  :root:not([data-theme="light"]) .icono-luna { display: none; }
+}
+
 /* Slider móvil: oculta la barra de scroll pero mantiene el desplazamiento */
 .slider-sin-barra {
   scrollbar-width: none;

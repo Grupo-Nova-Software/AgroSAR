@@ -2,7 +2,7 @@
 // Pestaña "Suelo": cultivo + zona → mapa coloreado por recomendación, tarjeta de datos y gráfico.
 // Datos: /data/humedad/*.json (contrato humedad v0) y /api/recomendacion (contrato recomendacion v0).
 import Image from "next/image";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import type { EstadoRecomendacion, IndiceHumedad, Recomendacion, SerieHumedad } from "@/types/contratos";
 import { CULTIVOS } from "../cultivos";
@@ -11,20 +11,18 @@ import Marco from "../Marco";
 import GraficoHumedad from "./GraficoHumedad";
 import MapaAreas, { TOKEN_ESTADO } from "./MapaAreas";
 
-export default function VistaSuelo() {
+export default function VistaSuelo({ cultivo: cultivoParam, area: areaParam }: { cultivo?: string; area?: string }) {
   const { t, tr, idioma } = useIdioma();
   const router = useRouter();
-  const params = useSearchParams();
 
-  const cultivo = CULTIVOS.find((c) => c.id === params.get("cultivo"))?.id ?? "soja";
+  const cultivo = CULTIVOS.find((c) => c.id === cultivoParam)?.id ?? "soja";
   const [areas, setAreas] = useState<SerieHumedad[]>([]);
   const [recos, setRecos] = useState<Record<string, Recomendacion>>({});
   const [error, setError] = useState<string | null>(null);
-  const areaId = params.get("area") ?? areas[0]?.id ?? "";
+  const areaId = (areaParam && areas.some((a) => a.id === areaParam) ? areaParam : areas[0]?.id) ?? "";
 
   const actualizarUrl = (cambios: { cultivo?: string; area?: string }) => {
-    const p = new URLSearchParams(params.toString());
-    Object.entries(cambios).forEach(([k, v]) => v && p.set(k, v));
+    const p = new URLSearchParams({ cultivo, ...(areaId ? { area: areaId } : {}), ...cambios });
     router.replace(`/suelo?${p.toString()}`, { scroll: false });
   };
 
