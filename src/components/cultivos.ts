@@ -1,15 +1,13 @@
-// Cultivos del slider de la página principal (diseño: public/imagenes/MainScreen.png).
-// `fondo`: color al que cambia el fondo cuando el cultivo está activo.
-// PROVISIONAL: la paleta no define un color por cultivo; se usaron tonos derivados de la paleta.
-// Confirmar con la diseñadora.
+// Cultivos de la app (diseño: public/imagenes/MainScreen.png).
+// El color de fondo de cada cultivo está en globals.css como --fondo-<id> (versión clara y oscura).
+// PROVISIONAL: la paleta no define un color por cultivo; se usaron tonos derivados. Confirmar con la diseñadora.
 import type { Texto } from "./idioma";
 
 export interface Cultivo {
-  id: string;
+  id: "soja" | "mandioca" | "maiz";
   nombre: Texto;
   descripcion?: Texto;
   imagen: string;
-  fondo: string;
 }
 
 export const CULTIVOS: Cultivo[] = [
@@ -17,7 +15,6 @@ export const CULTIVOS: Cultivo[] = [
     id: "soja",
     nombre: { es: "Soja", en: "Soybean" },
     imagen: "/imagenes/Soja.jpeg",
-    fondo: "#dfeccb", // tono claro de verde campo #A9C47F
   },
   {
     id: "mandioca",
@@ -27,7 +24,6 @@ export const CULTIVOS: Cultivo[] = [
       en: "Traditional crop of great nutritional value.",
     },
     imagen: "/imagenes/Mandioca.jpeg",
-    fondo: "#cfe3d4", // tono de verde principal #287D45
   },
   {
     id: "maiz",
@@ -37,6 +33,7 @@ export const CULTIVOS: Cultivo[] = [
       en: "Essential crop for food production.",
     },
     imagen: "/imagenes/Maiz.jpeg",
-    fondo: "#f3e2bd", // tono claro de dorado cosecha #D9A441
   },
 ];
+
+export const fondoDe = (id: string) => `var(--fondo-${id})`;

@@ -1,47 +1,111 @@
 @import "tailwindcss";
 
-/* Paleta AgroSAR (diseño: public/imagenes/paletaColoresAgroSAR.jpeg) */
-:root {
-  --verde-principal: #287d45; /* encabezados y botones */
-  --verde-profundo: #1f5936;  /* textos destacados */
-  --verde-suave: #e5f2e8;     /* detalles y fondos */
-  --verde-niebla: #f1f6f0;    /* tarjetas */
-  --blanco: #ffffff;          /* fondo principal */
-  --gris-carbon: #343a36;     /* texto principal */
-  --dorado-cosecha: #d9a441;  /* acentos y alertas */
-  --verde-campo: #a9c47f;     /* indicadores secundarios */
+/*
+  Paleta AgroSAR (diseño: public/imagenes/paletaColoresAgroSAR.jpeg)
+  #287D45 verde principal · #1F5936 verde profundo · #E5F2E8 verde suave · #F1F6F0 verde niebla
+  #FFFFFF blanco · #343A36 gris carbón · #D9A441 dorado cosecha · #A9C47F verde campo
+  Los componentes usan SOLO los tokens semánticos de abajo; cada modo los redefine.
+*/
 
-  /* Alias semánticos (usados por los componentes) */
-  --bg: var(--blanco);
-  --surface: var(--verde-niebla);
-  --ink: var(--gris-carbon);
-  --muted: #5f6b63; /* derivado de gris carbón para texto secundario */
-  --line: var(--verde-suave);
-  --signal: var(--dorado-cosecha);
+/* ---------- Modo claro ---------- */
+:root {
+  color-scheme: light;
+  --fondo: #ffffff;
+  --tarjeta: #f1f6f0;          /* verde niebla */
+  --tarjeta-2: #e5f2e8;        /* verde suave */
+  --borde: #d5e6da;
+  --texto: #343a36;            /* gris carbón */
+  --texto-suave: #5f6b63;
+  --acento: #1f5936;           /* verde profundo: textos destacados */
+  --primario: #287d45;         /* verde principal: logo, botones */
+  --primario-hover: #1f5936;
+  --sobre-primario: #ffffff;
+  --dorado: #d9a441;           /* acentos y alertas */
+  --campo: #a9c47f;            /* indicadores secundarios */
+  --peligro: #b5472f;          /* extensión de la paleta para "precaución" */
+  --barra: rgba(255, 255, 255, 0.86);
+  --sombra: 0 6px 24px rgba(31, 89, 54, 0.12);
+
+  /* Fondo por cultivo (página principal) */
+  --fondo-soja: #e3eed2;
+  --fondo-mandioca: #d6e9dc;
+  --fondo-maiz: #f5e7c6;
+}
+
+/* ---------- Modo oscuro (mismos tonos, en versión nocturna) ---------- */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --fondo: #101613;
+  --tarjeta: #18211c;
+  --tarjeta-2: #1f2b24;
+  --borde: #2b3a31;
+  --texto: #e4ece6;
+  --texto-suave: #9fb1a5;
+  --acento: #9fd6ad;
+  --primario: #2f8f50;
+  --primario-hover: #37a35c;
+  --sobre-primario: #ffffff;
+  --dorado: #e0b25a;
+  --campo: #b9d08f;
+  --peligro: #e07a5f;
+  --barra: rgba(16, 22, 19, 0.86);
+  --sombra: 0 6px 24px rgba(0, 0, 0, 0.45);
+  --fondo-soja: #1d2a17;
+  --fondo-mandioca: #142a1d;
+  --fondo-maiz: #2e2614;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --fondo: #101613;
+    --tarjeta: #18211c;
+    --tarjeta-2: #1f2b24;
+    --borde: #2b3a31;
+    --texto: #e4ece6;
+    --texto-suave: #9fb1a5;
+    --acento: #9fd6ad;
+    --primario: #2f8f50;
+    --primario-hover: #37a35c;
+    --sobre-primario: #ffffff;
+    --dorado: #e0b25a;
+    --campo: #b9d08f;
+    --peligro: #e07a5f;
+    --barra: rgba(16, 22, 19, 0.86);
+    --sombra: 0 6px 24px rgba(0, 0, 0, 0.45);
+    --fondo-soja: #1d2a17;
+    --fondo-mandioca: #142a1d;
+    --fondo-maiz: #2e2614;
+  }
 }
 
 @theme inline {
-  --color-verde-principal: var(--verde-principal);
-  --color-verde-profundo: var(--verde-profundo);
-  --color-verde-suave: var(--verde-suave);
-  --color-verde-niebla: var(--verde-niebla);
-  --color-gris-carbon: var(--gris-carbon);
-  --color-dorado-cosecha: var(--dorado-cosecha);
-  --color-verde-campo: var(--verde-campo);
-  --color-bg: var(--bg);
-  --color-surface: var(--surface);
-  --color-ink: var(--ink);
-  --color-muted: var(--muted);
-  --color-line: var(--line);
-  --color-signal: var(--signal);
-  --font-sans: var(--font-nunito);
-  --font-logo: var(--font-patrick);
+  --color-fondo: var(--fondo);
+  --color-tarjeta: var(--tarjeta);
+  --color-tarjeta-2: var(--tarjeta-2);
+  --color-borde: var(--borde);
+  --color-texto: var(--texto);
+  --color-texto-suave: var(--texto-suave);
+  --color-acento: var(--acento);
+  --color-primario: var(--primario);
+  --color-primario-hover: var(--primario-hover);
+  --color-sobre-primario: var(--sobre-primario);
+  --color-dorado: var(--dorado);
+  --color-campo: var(--campo);
+  --color-peligro: var(--peligro);
+  --color-barra: var(--barra);
+  --font-sans: var(--font-jakarta);
+  --font-display: var(--font-fraunces);
+  --shadow-suave: var(--sombra);
 }
 
+html {
+  background: var(--fondo);
+}
 body {
-  background: var(--bg);
-  color: var(--ink);
-  font-family: var(--font-nunito), system-ui, sans-serif;
+  background: var(--fondo);
+  color: var(--texto);
+  font-family: var(--font-jakarta), system-ui, sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* Slider móvil: oculta la barra de scroll pero mantiene el desplazamiento */
@@ -52,8 +116,22 @@ body {
   display: none;
 }
 
+/* Leaflet: controles acordes al tema */
+.leaflet-container {
+  font-family: inherit;
+  background: var(--tarjeta);
+}
+.leaflet-bar a,
+.leaflet-control-attribution {
+  background: var(--barra) !important;
+  color: var(--texto) !important;
+}
+.leaflet-control-attribution a {
+  color: var(--acento) !important;
+}
+
 :focus-visible {
-  outline: 2px solid var(--verde-principal);
+  outline: 2px solid var(--primario);
   outline-offset: 2px;
 }
 

@@ -13,24 +13,55 @@ const TEXTOS = {
     en: "Discover which crops best suit your land.",
   },
   conocer: { es: "Conocer cultivo", en: "Explore crop" },
+  irACultivo: { es: "Ver datos del suelo para", en: "See soil data for" },
   aviso: {
     es: "Datos de ejemplo / provisionales: todavía no usar para decisiones reales.",
     en: "Sample / provisional data: not yet for real decisions.",
-  },
-  volver: { es: "Volver", en: "Back" },
-  enConstruccion: {
-    es: "Página del cultivo en construcción. Recomendaciones de ejemplo por zona:",
-    en: "Crop page under construction. Sample recommendations by area:",
   },
   pie: {
     es: "Datos: NISAR (NASA-ISRO, ASF DAAC) y NASA POWER. Proyecto comunitario, no afiliado ni respaldado por NASA.",
     en: "Data: NASA-ISRO NISAR (ASF DAAC) and NASA POWER. Community project, not affiliated with or endorsed by NASA.",
   },
-  irACultivo: { es: "Ir al cultivo", en: "Go to crop" },
   cargando: { es: "Cargando…", en: "Loading…" },
+  // Navegación
+  navCultivos: { es: "Cultivos", en: "Crops" },
+  navSuelo: { es: "Suelo", en: "Soil" },
+  navClima: { es: "Clima", en: "Weather" },
+  modoClaro: { es: "Cambiar a modo claro", en: "Switch to light mode" },
+  modoOscuro: { es: "Cambiar a modo oscuro", en: "Switch to dark mode" },
+  // Suelo
+  sueloTitulo: { es: "Humedad del suelo", en: "Soil moisture" },
+  sueloSubtitulo: {
+    es: "Elegí tu cultivo y tocá tu zona en el mapa.",
+    en: "Pick your crop and tap your area on the map.",
+  },
+  cultivo: { es: "Cultivo", en: "Crop" },
+  zona: { es: "Zona", en: "Area" },
+  recomendacion: { es: "Recomendación", en: "Guidance" },
+  humedadActual: { es: "Última humedad", en: "Latest moisture" },
+  retrodispersion: { es: "Retrodispersión HV", en: "HV backscatter" },
+  observaciones: { es: "Observaciones", en: "Observations" },
+  serieTitulo: { es: "Evolución de la humedad", en: "Moisture over time" },
+  calidadDudosa: { es: "calidad dudosa", en: "low quality" },
+  umbralesSupuestos: {
+    es: "Umbrales provisionales, sin validación agronómica. Consultá siempre a tu técnico.",
+    en: "Provisional thresholds, not agronomically validated. Always consult your agronomist.",
+  },
+  fuente: { es: "Fuente", en: "Source" },
+  sinDatos: { es: "Sin datos", en: "No data" },
+  estado_sembrar: { es: "Sembrar", en: "Sow" },
+  estado_esperar: { es: "Esperar", en: "Wait" },
+  estado_precaucion: { es: "Precaución", en: "Caution" },
+  // Clima
+  climaTitulo: { es: "Clima", en: "Weather" },
+  proximamente: { es: "Próximamente", en: "Coming soon" },
+  climaTexto: {
+    es: "Pronóstico de lluvia y temperatura por zona, combinado con la humedad del suelo, para planificar mejor la siembra.",
+    en: "Rain and temperature forecast by area, combined with soil moisture, to plan sowing better.",
+  },
 } satisfies Record<string, Texto>;
 
-type Clave = keyof typeof TEXTOS;
+export type Clave = keyof typeof TEXTOS;
 
 const Ctx = createContext<{ idioma: Idioma; setIdioma: (i: Idioma) => void }>({ idioma: "es", setIdioma: () => {} });
 
@@ -71,23 +102,19 @@ export function useIdioma() {
   return { idioma, setIdioma, t, tr };
 }
 
-export function SelectorIdioma() {
+/** Botón compacto: muestra el idioma al que se cambia. */
+export function BotonIdioma() {
   const { idioma, setIdioma } = useIdioma();
+  const otro: Idioma = idioma === "es" ? "en" : "es";
   return (
-    <div role="group" aria-label="Idioma / Language" className="flex overflow-hidden rounded-full border border-verde-principal text-sm">
-      {(["es", "en"] as const).map((i) => (
-        <button
-          key={i}
-          type="button"
-          onClick={() => setIdioma(i)}
-          aria-pressed={idioma === i}
-          className={`px-3 py-1 font-semibold uppercase transition-colors ${
-            idioma === i ? "bg-verde-principal text-white" : "text-verde-principal hover:bg-verde-suave"
-          }`}
-        >
-          {i}
-        </button>
-      ))}
-    </div>
+    <button
+      type="button"
+      onClick={() => setIdioma(otro)}
+      aria-label={idioma === "es" ? "Switch to English" : "Cambiar a español"}
+      title={idioma === "es" ? "Switch to English" : "Cambiar a español"}
+      className="grid h-8 min-w-8 place-items-center rounded-full border border-borde bg-barra px-2 text-[11px] font-bold uppercase tracking-wide text-acento backdrop-blur transition-colors hover:bg-tarjeta-2"
+    >
+      {otro}
+    </button>
   );
 }
