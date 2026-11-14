@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agrosar/recomendacion.v0",
+  "title": "Recomendación para un área y un cultivo (PROPUESTA v0)",
+  "description": "Producido por el rol Backend. Respuesta de GET /api/recomendacion?area=<id>&cultivo=<cultivo>&hasta=<AAAA-MM-DD>.",
+  "type": "object",
+  "required": ["area_id", "cultivo", "hasta", "estado", "etiqueta", "motivo", "es_ejemplo"],
+  "properties": {
+    "area_id": { "type": "string" },
+    "cultivo": { "type": "string", "description": "p. ej. 'soja', 'trigo', 'maiz' (la lista la define Backend en config/)" },
+    "hasta": { "type": "string", "format": "date" },
+    "estado": { "enum": ["sembrar", "esperar", "precaucion"] },
+    "etiqueta": { "type": "string", "description": "Texto corto para la tarjeta" },
+    "motivo": { "type": "string", "description": "Explicación en lenguaje simple del porqué" },
+    "humedad_media_m3m3": { "type": ["number", "null"] },
+    "n_observaciones": { "type": "integer" },
+    "umbrales_supuestos": { "type": "boolean", "description": "true mientras los umbrales no estén validados" },
+    "es_ejemplo": { "type": "boolean" }
+  }
+}

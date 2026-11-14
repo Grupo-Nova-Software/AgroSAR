@@ -5,19 +5,19 @@
    "id": "natalio",
    "zona": "Natalio",
    "archivo": "natalio.json",
-   "ejemplo": true
+   "es_ejemplo": true
   },
   {
    "id": "noreste",
    "zona": "Noreste: Capitán Meza, Pirapó, Edelira",
    "archivo": "noreste.json",
-   "ejemplo": true
+   "es_ejemplo": true
   },
   {
    "id": "obligado_hohenau_miranda",
    "zona": "Obligado / Hohenau / Capitán Miranda",
    "archivo": "obligado_hohenau_miranda.json",
-   "ejemplo": true
+   "es_ejemplo": true
   }
  ]
 }

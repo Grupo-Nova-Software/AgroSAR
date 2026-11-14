@@ -1,7 +1,8 @@
 {
  "_aviso": "EJEMPLO FICTICIO — valores inventados para desarrollo, NO son datos NASA reales",
- "zona": "Natalio",
  "id": "natalio",
+ "zona": "Natalio",
+ "tipo": "zona",
  "bbox": [
   -55.22,
   -26.86,
@@ -9,6 +10,7 @@
   -26.66
  ],
  "fuente": "EJEMPLO FICTICIO",
+ "es_ejemplo": true,
  "serie": [
   {
    "fecha": "2026-06-19",
