@@ -1,0 +1,80 @@
+{
+  "_estado": "SUPUESTO — valores provisionales del equipo, SIN validar con agrónomos (MAG / CAPECO). No usar para decisiones reales.",
+  "id": "soja",
+  "nombre": "Soja",
+  "nombre_en": "Soybean",
+  "fuente": "Relevamiento interno del equipo (SOJA.txt, 2026-11-14). Fuente oficial PENDIENTE.",
+  "supuesto": true,
+
+  "temporadas": [
+    { "id": "zafra", "nombre": "Zafra", "inicio": "09-01", "fin": "10-31", "ideal": true, "nota": "Período ideal" },
+    { "id": "zafrinha", "nombre": "Zafriña", "inicio": "01-01", "fin": "02-28", "ideal": false, "nota": "Ventana más cerrada, con riesgo de estrés" }
+  ],
+  "tolerancia_temprana_dias": 15,
+  "tramo_tardio_dias": 15,
+  "tardia_max_dias": 30,
+
+  "ciclos": [
+    { "id": "super_precoz", "nombre": "Súper precoz", "rango": "< 115 días", "dias": 110 },
+    { "id": "precoz", "nombre": "Precoz", "rango": "116–125 días", "dias": 120 },
+    { "id": "semi_precoz", "nombre": "Semi precoz", "rango": "126–135 días", "dias": 130 },
+    { "id": "medio", "nombre": "Medio", "rango": "136–145 días", "dias": 140 },
+    { "id": "tardio", "nombre": "Tardío", "rango": "> 146 días", "dias": 150 }
+  ],
+  "ciclo_por_defecto": "semi_precoz",
+  "emergencia_dias": 7,
+  "_emergencia_nota": "SUPUESTO",
+  "etapas": [
+    { "id": "implantacion", "nombre": "Implantación y emergencia", "desde": 0, "hasta": 0.1, "critica_agua": true },
+    { "id": "vegetativa", "nombre": "Crecimiento vegetativo", "desde": 0.1, "hasta": 0.45, "critica_agua": false },
+    { "id": "floracion", "nombre": "Floración y formación de vainas", "desde": 0.45, "hasta": 0.75, "critica_agua": true },
+    { "id": "llenado", "nombre": "Llenado de granos y madurez", "desde": 0.75, "hasta": 1, "critica_agua": false }
+  ],
+  "_etapas_nota": "SUPUESTO: proporción del ciclo en cada etapa.",
+  "cosecha_dias_despues_madurez": 10,
+  "ventana_cosecha_dias": 20,
+
+  "humedad": { "seco_max": 0.15, "bajo_max": 0.2, "optimo_max": 0.35, "saturado_min": 0.4 },
+  "_humedad_nota": "SUPUESTO, m³/m³ (NISAR SME2). Entre optimo_max y saturado_min = 'humedo'. Coincide con config/umbrales.json.",
+
+  "heladas": { "inicio": "05-15", "fin": "09-10", "sensible": true, "nota": "SUPUESTO: período con riesgo de heladas en Itapúa" },
+
+  "suelo_requisitos": { "ph_min": 5.5, "ph_max": 7.0, "materia_organica_min_pct": 2.5, "pendiente_max_pct": 8, "drenaje": "bueno" },
+  "_suelo_nota": "SUPUESTO: los problemas de suelo (acidez, nutrientes P/K/Ca/Mg, materia orgánica, compactación, erosión) solo se evalúan si el usuario carga su análisis.",
+
+  "semillas": [
+    { "suelos": ["arcilloso", "franco"], "semilla": "R49", "motivo": "Suelo arcilloso, fértil y bien drenado" },
+    { "suelos": ["arenoso"], "semilla": "R19", "motivo": "Suelo liviano o arenoso" },
+    { "suelos": ["humedo"], "semilla": "R49", "motivo": "Suelo pesado y húmedo" },
+    { "condicion": "estres_hidrico", "semilla": "R24", "motivo": "Riesgo de estrés hídrico" },
+    { "condicion": "siembra_tardia", "semilla": "R34", "motivo": "Siembra tardía" }
+  ],
+  "semilla_por_defecto": { "semilla": "R49", "motivo": "Sin datos de suelo: variedad de referencia del equipo" },
+  "_semillas_nota": "Códigos de variedad tal como los pasó el equipo. Fuente comercial PENDIENTE.",
+
+  "oreo_dias": { "arcilloso": 5, "humedo": 6, "franco": 3, "arenoso": 2, "degradado": 3, "_default": 4 },
+  "_oreo_nota": "SUPUESTO: días que tarda un suelo saturado en permitir el ingreso de maquinaria.",
+
+  "clima_referencia": null,
+
+  "escenarios": {
+    "temprana": "Escenario 1: sembramos demasiado temprano",
+    "tardia": "Escenario 2: las lluvias retrasan la siembra",
+    "agua": "Escenario 3: calculamos mal la disponibilidad de agua",
+    "cosecha": "Escenario 4: calculamos mal la fecha de cosecha"
+  },
+
+  "problemas": [
+    { "id": "acidez", "nombre": "Acidez del suelo", "categoria": "suelo", "dato": "usuario", "detalle": "Un pH inadecuado limita los nutrientes." },
+    { "id": "nutrientes", "nombre": "Deficiencia de nutrientes", "categoria": "suelo", "dato": "usuario", "detalle": "Fósforo, potasio, calcio y magnesio." },
+    { "id": "materia_organica", "nombre": "Bajo contenido de materia orgánica", "categoria": "suelo", "dato": "usuario", "detalle": "Afecta la capacidad de retención de agua." },
+    { "id": "compactacion", "nombre": "Compactación", "categoria": "suelo", "dato": "usuario", "detalle": "Dificulta el crecimiento de raíces y la distribución del agua." },
+    { "id": "erosion", "nombre": "Erosión", "categoria": "suelo", "dato": "usuario", "detalle": "En lugares con pendiente y poca cobertura vegetal." },
+    { "id": "analisis_suelo", "nombre": "Sin análisis de suelo", "categoria": "suelo", "dato": "usuario", "detalle": "Sin análisis no se sabe la cantidad de fertilizante ni los sectores a corregir." },
+    { "id": "exceso_agua", "nombre": "Exceso de precipitaciones", "categoria": "agua", "dato": "nisar", "detalle": "No se puede ingresar con maquinaria, retrasos en la siembra, suelo saturado, problemas de germinación, más enfermedades y pérdida de nutrientes por lavado." },
+    { "id": "falta_agua", "nombre": "Falta de precipitaciones", "categoria": "agua", "dato": "nisar", "detalle": "Problemas de germinación, menor desarrollo, estrés hídrico y pérdidas en floración y formación de vainas." },
+    { "id": "temporada", "nombre": "Temporada de siembra", "categoria": "temporada", "dato": "calendario", "detalle": "Zafra (septiembre–octubre) ideal; zafriña (enero–febrero) con más riesgo." },
+    { "id": "helada", "nombre": "Heladas antes de la madurez", "categoria": "clima", "dato": "calendario", "detalle": "Riesgo de que el cultivo no madure antes del frío." },
+    { "id": "cosecha", "nombre": "Fecha de cosecha", "categoria": "temporada", "dato": "calendario", "detalle": "Estimación de la cosecha según el ciclo de la variedad." }
+  ]
+}

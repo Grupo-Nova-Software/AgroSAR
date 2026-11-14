@@ -1,0 +1,91 @@
+{
+  "_estado": "SUPUESTO — valores provisionales del equipo, SIN validar con agrónomos (MAG). No usar para decisiones reales.",
+  "id": "maiz",
+  "nombre": "Maíz",
+  "nombre_en": "Maize",
+  "fuente": "Relevamiento interno del equipo (MAIZ.txt, 2026-11-14). Fuente oficial PENDIENTE.",
+  "supuesto": true,
+
+  "temporadas": [
+    { "id": "zafra", "nombre": "Zafra", "inicio": "08-01", "fin": "10-31", "ideal": true, "nota": "Temporada principal" },
+    { "id": "zafrinha", "nombre": "Zafriña", "inicio": "01-01", "fin": "02-28", "ideal": false, "nota": "Riesgo de llegar al invierno sin madurar" }
+  ],
+  "tolerancia_temprana_dias": 15,
+  "tramo_tardio_dias": 15,
+  "tardia_max_dias": 30,
+
+  "ciclos": [
+    { "id": "super_precoz", "nombre": "Súper precoz", "rango": "< 125 días", "dias": 120 },
+    { "id": "precoz", "nombre": "Precoz", "rango": "126–135 días", "dias": 130 },
+    { "id": "normal", "nombre": "Normal", "rango": "> 136 días", "dias": 140 }
+  ],
+  "_ciclos_nota": "PENDIENTE DE DECISIÓN: el documento también dice 'madurez fisiológica en 90–110 días'. Se usa la tabla de semillas hasta que el equipo decida.",
+  "ciclo_por_defecto": "precoz",
+  "emergencia_dias": 7,
+  "etapas": [
+    { "id": "implantacion", "nombre": "Implantación y emergencia", "desde": 0, "hasta": 0.1, "critica_agua": true },
+    { "id": "vegetativa", "nombre": "Crecimiento vegetativo", "desde": 0.1, "hasta": 0.45, "critica_agua": false },
+    { "id": "floracion", "nombre": "Floración y polinización", "desde": 0.45, "hasta": 0.6, "critica_agua": true },
+    { "id": "llenado", "nombre": "Llenado de granos", "desde": 0.6, "hasta": 0.9, "critica_agua": true },
+    { "id": "madurez", "nombre": "Madurez fisiológica", "desde": 0.9, "hasta": 1, "critica_agua": false }
+  ],
+  "_etapas_nota": "SUPUESTO: proporción del ciclo en cada etapa.",
+  "cosecha_dias_despues_madurez": 15,
+  "ventana_cosecha_dias": 25,
+
+  "humedad": { "seco_max": 0.15, "bajo_max": 0.2, "optimo_max": 0.35, "saturado_min": 0.4 },
+  "_humedad_nota": "SUPUESTO, m³/m³ (NISAR SME2).",
+
+  "heladas": { "inicio": "05-15", "fin": "09-10", "sensible": true, "nota": "SUPUESTO: el maíz es sensible a las heladas mientras crece o antes de madurar" },
+
+  "suelo_requisitos": { "ph_min": 5.5, "ph_max": 7.0, "profundidad": "profundo", "pendiente_max_pct": 8, "drenaje": "bueno" },
+  "_suelo_nota": "Del documento del equipo: suelo profundo, pH 5,5–7,0, buena fertilidad, bien estructurado, superficie plana o manejable y buen drenaje.",
+
+  "semillas": [
+    { "suelos": ["arcilloso"], "semilla": "Híbrido de alto potencial productivo (precoz o normal)", "motivo": "Puede aprovechar las buenas condiciones de un suelo arcilloso, profundo y fértil" },
+    { "suelos": ["arenoso"], "semilla": "Híbrido estable con buen comportamiento ante déficit hídrico", "motivo": "Hay que reducir el riesgo de estrés por falta de agua" },
+    { "suelos": ["franco"], "semilla": "Híbrido adaptado a la época de siembra", "motivo": "Aprovecha la buena combinación de retención y drenaje" },
+    { "suelos": ["humedo"], "semilla": "Híbrido con buen comportamiento sanitario y agronómico (y corregir el drenaje)", "motivo": "El exceso de agua puede perjudicar el establecimiento" },
+    { "condicion": "baja_fertilidad", "semilla": "Híbrido adaptado a ambientes de menor potencial", "motivo": "Evitar elegir solo por el rendimiento máximo anunciado" },
+    { "condicion": "estres_hidrico", "semilla": "Híbrido estable con buen comportamiento ante déficit hídrico", "motivo": "Riesgo de estrés hídrico" },
+    { "condicion": "siembra_tardia", "semilla": "Híbrido súper precoz", "motivo": "Siembra tardía: un ciclo corto ayuda a madurar antes de las heladas (SUPUESTO)" }
+  ],
+  "semilla_por_defecto": { "semilla": "Híbrido adaptado a la época de siembra", "motivo": "Sin datos de suelo" },
+
+  "oreo_dias": { "arcilloso": 5, "humedo": 6, "franco": 3, "arenoso": 2, "degradado": 3, "_default": 4 },
+  "_oreo_nota": "SUPUESTO",
+
+  "clima_referencia": {
+    "_nota": "Para la integración de clima (mañana). Aún no se usa.",
+    "temperatura_media_c": [25, 27],
+    "humedad_relativa_pct": [60, 70],
+    "precipitacion_mm": [600, 800],
+    "_precipitacion_nota": "El documento dice 'anuales'; confirmar si es por ciclo."
+  },
+
+  "registro_lote": ["fecha_siembra", "hibrido", "duracion_ciclo", "fecha_emergencia", "fecha_floracion_estimada", "estado_llenado", "fecha_madurez_fisiologica", "humedad_grano", "fecha_cosecha"],
+
+  "escenarios": {
+    "temprana": "Escenario 1: sembramos demasiado temprano",
+    "tardia": "Escenario 2: nos retrasamos y sembramos tarde",
+    "helada": "Escenario 3: el maíz zafriña llega al invierno sin madurar",
+    "exceso": "Escenario 4: tenemos exceso de precipitaciones"
+  },
+
+  "problemas": [
+    { "id": "temperatura", "nombre": "Temperatura", "categoria": "clima", "dato": "clima_pendiente", "detalle": "Necesita temperaturas cálidas (25–27 °C) para germinar y desarrollarse." },
+    { "id": "helada", "nombre": "Heladas antes de la madurez", "categoria": "clima", "dato": "calendario", "detalle": "Debe completar la maduración antes de que aumenten las bajas temperaturas y las heladas." },
+    { "id": "agua_floracion", "nombre": "Agua en floración y polinización", "categoria": "agua", "dato": "nisar", "detalle": "Necesita agua todo el ciclo, sobre todo en floración y polinización." },
+    { "id": "humedad_posterior", "nombre": "Humedad del suelo en etapas posteriores", "categoria": "agua", "dato": "nisar", "detalle": "No alcanza con que haya llovido antes de sembrar." },
+    { "id": "radiacion", "nombre": "Radiación solar", "categoria": "clima", "dato": "clima_pendiente", "detalle": "Necesita luz para la fotosíntesis." },
+    { "id": "exceso_agua", "nombre": "Exceso de precipitaciones", "categoria": "agua", "dato": "nisar", "detalle": "El exceso de agua perjudica la germinación y el crecimiento." },
+    { "id": "drenaje", "nombre": "Suelo con problemas de drenaje", "categoria": "suelo", "dato": "usuario", "detalle": "Ningún híbrido reemplaza un drenaje adecuado." },
+    { "id": "acidez", "nombre": "pH fuera de rango", "categoria": "suelo", "dato": "usuario", "detalle": "Buscado: pH 5,5 a 7,0." },
+    { "id": "profundidad", "nombre": "Suelo poco profundo", "categoria": "suelo", "dato": "usuario", "detalle": "El maíz busca suelos profundos." },
+    { "id": "nutrientes", "nombre": "Fertilidad baja", "categoria": "suelo", "dato": "usuario", "detalle": "Se necesita buena disponibilidad de nutrientes." },
+    { "id": "compactacion", "nombre": "Compactación", "categoria": "suelo", "dato": "usuario", "detalle": "Pasa si se trabaja el suelo arcilloso en condiciones inadecuadas." },
+    { "id": "erosion", "nombre": "Pendiente", "categoria": "suelo", "dato": "usuario", "detalle": "Preferentemente una superficie plana o manejable." },
+    { "id": "temporada", "nombre": "Temporada de siembra", "categoria": "temporada", "dato": "calendario", "detalle": "Zafra (agosto–octubre) y zafriña (enero–febrero)." },
+    { "id": "cosecha", "nombre": "Fecha de cosecha", "categoria": "temporada", "dato": "calendario", "detalle": "Estimada según el ciclo del híbrido." }
+  ]
+}
