@@ -1,5 +1,4 @@
 {
- "_aviso": "EJEMPLO FICTICIO — valores inventados para desarrollo, NO son datos NASA reales",
  "id": "obligado_hohenau_miranda",
  "zona": "Obligado / Hohenau / Capitán Miranda",
  "tipo": "zona",
@@ -9,152 +8,23 @@
   -55.55,
   -26.98
  ],
- "fuente": "EJEMPLO FICTICIO",
- "es_ejemplo": true,
+ "fuente": "NISAR L3 SME2 (provisional) · NASA-ISRO · ASF DAAC",
+ "es_ejemplo": false,
+ "mascara": "Celdas de 200 m con retrievalQualityFlag 'recomendado' y sin agua (waterbodyFraction ≤ 0.5); si hay menos de 50, todas las válidas (calidad 'dudosa').",
  "serie": [
   {
    "fecha": "2026-06-19",
-   "humedad_m3m3": 0.268,
-   "hv_db": -16.5,
-   "calidad": "buena"
+   "humedad_m3m3": 0.312,
+   "hv_db": -16.1,
+   "calidad": "buena",
+   "pixeles_validos": 14083
   },
   {
-   "fecha": "2026-06-24",
-   "humedad_m3m3": 0.253,
-   "hv_db": -17.3,
-   "calidad": "buena"
-  },
-  {
-   "fecha": "2026-06-28",
-   "humedad_m3m3": 0.218,
-   "hv_db": -17.4,
-   "calidad": "buena"
-  },
-  {
-   "fecha": "2026-07-05",
-   "humedad_m3m3": 0.231,
-   "hv_db": -17.7,
-   "calidad": "buena"
-  },
-  {
-   "fecha": "2026-07-12",
-   "humedad_m3m3": 0.188,
-   "hv_db": -18.8,
-   "calidad": "buena"
-  },
-  {
-   "fecha": "2026-07-17",
-   "humedad_m3m3": 0.152,
-   "hv_db": -20.1,
-   "calidad": "dudosa"
-  },
-  {
-   "fecha": "2026-07-24",
-   "humedad_m3m3": 0.133,
-   "hv_db": -19.7,
-   "calidad": "buena"
-  },
-  {
-   "fecha": "2026-07-28",
-   "humedad_m3m3": 0.136,
-   "hv_db": -20.5,
-   "calidad": "buena"
-  },
-  {
-   "fecha": "2026-08-02",
-   "humedad_m3m3": 0.121,
-   "hv_db": -20.6,
-   "calidad": "buena"
-  },
-  {
-   "fecha": "2026-08-06",
-   "humedad_m3m3": 0.115,
-   "hv_db": -19.6,
-   "calidad": "buena"
-  },
-  {
-   "fecha": "2026-08-10",
-   "humedad_m3m3": 0.167,
-   "hv_db": -18.8,
-   "calidad": "buena"
-  },
-  {
-   "fecha": "2026-08-17",
-   "humedad_m3m3": 0.162,
-   "hv_db": -19.3,
-   "calidad": "buena"
-  },
-  {
-   "fecha": "2026-08-22",
-   "humedad_m3m3": 0.174,
-   "hv_db": -19.0,
-   "calidad": "buena"
-  },
-  {
-   "fecha": "2026-08-29",
-   "humedad_m3m3": 0.22,
-   "hv_db": -17.0,
-   "calidad": "buena"
-  },
-  {
-   "fecha": "2026-09-05",
-   "humedad_m3m3": 0.216,
-   "hv_db": -18.3,
-   "calidad": "dudosa"
-  },
-  {
-   "fecha": "2026-09-12",
-   "humedad_m3m3": 0.286,
-   "hv_db": -16.3,
-   "calidad": "buena"
-  },
-  {
-   "fecha": "2026-09-16",
-   "humedad_m3m3": 0.262,
-   "hv_db": -17.3,
-   "calidad": "buena"
-  },
-  {
-   "fecha": "2026-09-20",
-   "humedad_m3m3": 0.309,
-   "hv_db": -15.1,
-   "calidad": "buena"
-  },
-  {
-   "fecha": "2026-09-28",
-   "humedad_m3m3": 0.257,
-   "hv_db": -17.3,
-   "calidad": "buena"
-  },
-  {
-   "fecha": "2026-10-02",
-   "humedad_m3m3": 0.279,
-   "hv_db": -16.6,
-   "calidad": "buena"
-  },
-  {
-   "fecha": "2026-10-09",
-   "humedad_m3m3": 0.233,
-   "hv_db": -17.5,
-   "calidad": "buena"
-  },
-  {
-   "fecha": "2026-10-14",
-   "humedad_m3m3": 0.26,
-   "hv_db": -16.0,
-   "calidad": "dudosa"
-  },
-  {
-   "fecha": "2026-10-22",
-   "humedad_m3m3": 0.244,
-   "hv_db": -17.5,
-   "calidad": "dudosa"
-  },
-  {
-   "fecha": "2026-10-29",
-   "humedad_m3m3": 0.196,
-   "hv_db": -18.4,
-   "calidad": "buena"
+   "fecha": "2026-10-17",
+   "humedad_m3m3": 0.24,
+   "hv_db": -18.5,
+   "calidad": "buena",
+   "pixeles_validos": 14350
   }
  ]
 }
