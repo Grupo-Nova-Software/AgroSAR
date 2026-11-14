@@ -1,0 +1,13 @@
+# Datos crudos (pesados, se descargan con scripts/)
+data/raw/*
+!data/raw/.gitkeep
+# Credenciales: nunca en el repo
+.netrc
+.env
+*.env
+# Python / Node
+__pycache__/
+.venv/
+venv/
+node_modules/
+.DS_Store
