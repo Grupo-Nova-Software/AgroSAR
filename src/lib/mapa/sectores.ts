@@ -31,7 +31,7 @@ export function resumirSectores(celdas: Celda[], hectareas: number) {
   for (const c of celdas) porCobertura[c.cobertura] = (porCobertura[c.cobertura] ?? 0) + 1;
 
   const aptas = celdas.filter((c) => c.apto);
-  const hum = celdas.map((c) => c.humedad_m3m3);
+  const hum = celdas.map((c) => c.humedad_m3m3).filter((v): v is number => typeof v === "number");
   const ordenadas = [...celdas].sort((a, b) => b.aptitud - a.aptitud);
   const sector = (c: Celda) => ({ id: c.id, centro: c.centro, aptitud: c.aptitud, cobertura: c.cobertura, humedad_m3m3: c.humedad_m3m3, pendiente_pct: c.pendiente_pct, motivos: c.motivos });
 
@@ -41,11 +41,9 @@ export function resumirSectores(celdas: Celda[], hectareas: number) {
     hectareas_aptas: Number((aptas.length * haCelda).toFixed(1)),
     porcentaje_apto: Math.round((aptas.length / celdas.length) * 100),
     cobertura_pct: Object.fromEntries(Object.entries(porCobertura).map(([k, n]) => [k, Math.round((n / celdas.length) * 100)])),
-    humedad_m3m3: {
-      media: Number((hum.reduce((s, v) => s + v, 0) / hum.length).toFixed(3)),
-      min: Math.min(...hum),
-      max: Math.max(...hum),
-    },
+    humedad_m3m3: hum.length
+      ? { media: Number((hum.reduce((s, v) => s + v, 0) / hum.length).toFixed(3)), min: Math.min(...hum), max: Math.max(...hum) }
+      : { media: null, min: null, max: null },
     aptitud_media: Math.round(celdas.reduce((s, c) => s + c.aptitud, 0) / celdas.length),
     mejores: ordenadas.slice(0, 3).map(sector),
     peores: ordenadas.slice(-3).reverse().filter((c) => c.aptitud < 50).map(sector),

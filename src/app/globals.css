@@ -1,62 +1,159 @@
 @import "tailwindcss";
 
-/* Tokens: "mission control" — tinta profunda, papel cálido, un acento ámbar de señal. */
+/*
+  Paleta AgroSAR (diseño: public/imagenes/paletaColoresAgroSAR.jpeg)
+  #287D45 verde principal · #1F5936 verde profundo · #E5F2E8 verde suave · #F1F6F0 verde niebla
+  #FFFFFF blanco · #343A36 gris carbón · #D9A441 dorado cosecha · #A9C47F verde campo
+  Los componentes usan SOLO los tokens semánticos de abajo; cada modo los redefine.
+*/
+
+/* ---------- Modo claro ---------- */
 :root {
-  --bg: #f4f1ea;
-  --surface: #fbf9f4;
-  --ink: #16181d;
-  --muted: #5d6270;
-  --line: #d9d4c7;
-  --signal: #c2410c;
-  --signal-soft: #fde8d9;
+  color-scheme: light;
+  --fondo: #ffffff;
+  --tarjeta: #f1f6f0;          /* verde niebla */
+  --tarjeta-2: #e5f2e8;        /* verde suave */
+  --borde: #d5e6da;
+  --texto: #343a36;            /* gris carbón */
+  --texto-suave: #5f6b63;
+  --acento: #1f5936;           /* verde profundo: textos destacados */
+  --primario: #287d45;         /* verde principal: logo, botones */
+  --primario-hover: #1f5936;
+  --sobre-primario: #ffffff;
+  --dorado: #d9a441;           /* acentos y alertas */
+  --campo: #a9c47f;            /* indicadores secundarios */
+  --peligro: #b5472f;          /* extensión de la paleta para "precaución" */
+  --barra: rgba(255, 255, 255, 0.86);
+  --sombra: 0 6px 24px rgba(31, 89, 54, 0.12);
+
+  /* Fondo por cultivo (página principal) */
+  --fondo-soja: #e3eed2;
+  --fondo-mandioca: #d6e9dc;
+  --fondo-maiz: #f5e7c6;
 }
 
+/* ---------- Modo oscuro (mismos tonos, en versión nocturna) ---------- */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --fondo: #101613;
+  --tarjeta: #18211c;
+  --tarjeta-2: #1f2b24;
+  --borde: #2b3a31;
+  --texto: #e4ece6;
+  --texto-suave: #9fb1a5;
+  --acento: #9fd6ad;
+  --primario: #2f8f50;
+  --primario-hover: #37a35c;
+  --sobre-primario: #ffffff;
+  --dorado: #e0b25a;
+  --campo: #b9d08f;
+  --peligro: #e07a5f;
+  --barra: rgba(16, 22, 19, 0.86);
+  --sombra: 0 6px 24px rgba(0, 0, 0, 0.45);
+  --fondo-soja: #1d2a17;
+  --fondo-mandioca: #142a1d;
+  --fondo-maiz: #2e2614;
+}
 @media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0b0d12;
-    --surface: #12151c;
-    --ink: #e9e6de;
-    --muted: #9097a6;
-    --line: #262b36;
-    --signal: #fb923c;
-    --signal-soft: #2a1a10;
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --fondo: #101613;
+    --tarjeta: #18211c;
+    --tarjeta-2: #1f2b24;
+    --borde: #2b3a31;
+    --texto: #e4ece6;
+    --texto-suave: #9fb1a5;
+    --acento: #9fd6ad;
+    --primario: #2f8f50;
+    --primario-hover: #37a35c;
+    --sobre-primario: #ffffff;
+    --dorado: #e0b25a;
+    --campo: #b9d08f;
+    --peligro: #e07a5f;
+    --barra: rgba(16, 22, 19, 0.86);
+    --sombra: 0 6px 24px rgba(0, 0, 0, 0.45);
+    --fondo-soja: #1d2a17;
+    --fondo-mandioca: #142a1d;
+    --fondo-maiz: #2e2614;
   }
 }
 
 @theme inline {
-  --color-bg: var(--bg);
-  --color-surface: var(--surface);
-  --color-ink: var(--ink);
-  --color-muted: var(--muted);
-  --color-line: var(--line);
-  --color-signal: var(--signal);
-  --color-signal-soft: var(--signal-soft);
-  --font-sans: var(--font-plex-sans);
-  --font-mono: var(--font-plex-mono);
-  --font-display: var(--font-display);
+  --color-fondo: var(--fondo);
+  --color-tarjeta: var(--tarjeta);
+  --color-tarjeta-2: var(--tarjeta-2);
+  --color-borde: var(--borde);
+  --color-texto: var(--texto);
+  --color-texto-suave: var(--texto-suave);
+  --color-acento: var(--acento);
+  --color-primario: var(--primario);
+  --color-primario-hover: var(--primario-hover);
+  --color-sobre-primario: var(--sobre-primario);
+  --color-dorado: var(--dorado);
+  --color-campo: var(--campo);
+  --color-peligro: var(--peligro);
+  --color-barra: var(--barra);
+  --font-sans: var(--font-jakarta);
+  --font-display: var(--font-fraunces);
+  --shadow-suave: var(--sombra);
 }
 
+html {
+  background: var(--fondo);
+}
 body {
-  background: var(--bg);
-  color: var(--ink);
-  font-family: var(--font-plex-sans), system-ui, sans-serif;
+  background: var(--fondo);
+  color: var(--texto);
+  font-family: var(--font-jakarta), system-ui, sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* Retícula sutil de fondo, como papel milimetrado de carta de navegación */
-.grid-paper {
-  background-image:
-    linear-gradient(var(--line) 1px, transparent 1px),
-    linear-gradient(90deg, var(--line) 1px, transparent 1px);
-  background-size: 48px 48px;
-  background-position: -1px -1px;
-  mask-image: linear-gradient(to bottom, black, transparent 85%);
+/* Ícono del botón de tema: luna en claro, sol en oscuro */
+.icono-sol { display: none; }
+:root[data-theme="dark"] .icono-sol { display: block; }
+:root[data-theme="dark"] .icono-luna { display: none; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .icono-sol { display: block; }
+  :root:not([data-theme="light"]) .icono-luna { display: none; }
+}
+
+/* Slider móvil: oculta la barra de scroll pero mantiene el desplazamiento */
+.slider-sin-barra {
+  scrollbar-width: none;
+}
+.slider-sin-barra::-webkit-scrollbar {
+  display: none;
+}
+
+/* Leaflet: mapa base oscurecido en modo oscuro (las teselas OSM solo existen en claro) */
+:root[data-theme="dark"] .leaflet-tile-pane {
+  filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.9) saturate(0.6);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .leaflet-tile-pane {
+    filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.9) saturate(0.6);
+  }
+}
+
+/* Leaflet: controles acordes al tema */
+.leaflet-container {
+  font-family: inherit;
+  background: var(--tarjeta);
+}
+.leaflet-bar a,
+.leaflet-control-attribution {
+  background: var(--barra) !important;
+  color: var(--texto) !important;
+}
+.leaflet-control-attribution a {
+  color: var(--acento) !important;
 }
 
 :focus-visible {
-  outline: 2px solid var(--signal);
+  outline: 2px solid var(--primario);
   outline-offset: 2px;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  * { transition: none !important; animation: none !important; }
+  * { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
 }
