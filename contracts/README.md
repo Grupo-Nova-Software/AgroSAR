@@ -8,6 +8,7 @@ Un contrato es el formato acordado de un archivo que **un rol produce y otro con
 |---|---|---|---|
 | `humedad.schema.json` | Datos (`pipeline/`) | Backend, Frontend | `public/data/humedad/<id>.json` + `index.json` |
 | `recomendacion.schema.json` | Backend (`src/lib/`, `src/app/api/`) | Frontend | `GET /api/recomendacion?area=<id>&cultivo=<c>` |
+| `humedad_grilla.schema.json` (PROPUESTA) | Datos (`pipeline/07_exportar_grilla.py`) | Backend (mapa de celdas, lotes) | `public/data/grilla/<id>.json` |
 
 Los tipos TypeScript equivalentes están en `src/types/contratos.ts` (también compartido; se cambia junto con estos esquemas).
 
