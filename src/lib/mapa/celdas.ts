@@ -8,7 +8,7 @@ import { clasificarHumedad } from "@/lib/agro/humedad";
 import { parseISO } from "@/lib/agro/fechas";
 import { fbm, hash } from "./ruido";
 import { type BBox, puntoEnPoligonos } from "./geo";
-import { DISTRITOS, kmACentroUrbano, type Distrito } from "./zonas";
+import { DISTRITOS, distritoMasCercano, kmACentroUrbano, type Distrito } from "./zonas";
 import { humedadNisar } from "./grilla-nisar";
 import type { Poligono } from "@/lib/agro/lote";
 
@@ -125,10 +125,13 @@ export function aptitudCelda(cfg: CultivoConfig | null, cobertura: Cobertura, es
 
 const UMBRALES_DEFECTO = { seco_max: 0.15, bajo_max: 0.2, optimo_max: 0.35, saturado_min: 0.4 };
 
-export function construirCelda(i: number, j: number, resM: number, fecha: string, cfg: CultivoConfig | null, d: Distrito): Celda {
+export function construirCelda(
+  i: number, j: number, resM: number, fecha: string, cfg: CultivoConfig | null, d: Distrito,
+  coberturaFija?: Cobertura, // p. ej. "cultivo" para el lote que marcó el agricultor (no hay capa real de cobertura)
+): Celda {
   const bbox = bboxCelda(i, j, resM);
   const centro: [number, number] = [(bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2];
-  const cobertura = coberturaCelda(centro, d);
+  const cobertura = coberturaFija ?? coberturaCelda(centro, d);
   const pendiente = pendienteCelda(centro);
   const real = cobertura === "agua" || cobertura === "urbano" ? null : humedadNisar(centro, fecha);
   // Con grilla real nunca se inventa: si NISAR no tiene dato válido, la celda queda "sin_datos".
@@ -159,6 +162,8 @@ export interface OpcionesGrilla {
   resM?: number;
   maxCeldas?: number;
   soloDentroDe?: Poligono[]; // centro de celda dentro del polígono
+  libre?: boolean; // no limitar a los distritos de trabajo (lotes dibujados en cualquier parte)
+  coberturaFija?: Cobertura;
 }
 
 // Celdas dentro de un bbox, solo las que caen en alguno de los distritos.
@@ -167,10 +172,10 @@ export function generarCeldas(bbox: BBox, op: OpcionesGrilla): { celdas: Celda[]
   const max = op.maxCeldas ?? 4000;
   let resM = op.resM ?? RES_BASE_M;
   const distritos = DISTRITOS.filter((d) => d.bbox[0] <= bbox[2] && d.bbox[2] >= bbox[0] && d.bbox[1] <= bbox[3] && d.bbox[3] >= bbox[1]);
-  if (distritos.length === 0) return { celdas: [], res_m: resM, recortado: false };
+  if (distritos.length === 0 && !op.libre) return { celdas: [], res_m: resM, recortado: false };
 
-  // Recortar el bbox a la unión de los distritos para no contar celdas vacías.
-  const b: BBox = [
+  // Recortar el bbox a la unión de los distritos para no contar celdas vacías (salvo en modo libre).
+  const b: BBox = op.libre ? bbox : [
     Math.max(bbox[0], Math.min(...distritos.map((d) => d.bbox[0]))),
     Math.max(bbox[1], Math.min(...distritos.map((d) => d.bbox[1]))),
     Math.min(bbox[2], Math.max(...distritos.map((d) => d.bbox[2]))),
@@ -194,10 +199,10 @@ export function generarCeldas(bbox: BBox, op: OpcionesGrilla): { celdas: Celda[]
     for (let j = a.j; j <= z.j; j++) {
       const cb = bboxCelda(i, j, resM);
       const centro: [number, number] = [(cb[0] + cb[2]) / 2, (cb[1] + cb[3]) / 2];
-      const d = distritos.find((x) => puntoEnPoligonos(centro, [x.poligono]));
+      const d = distritos.find((x) => puntoEnPoligonos(centro, [x.poligono])) ?? (op.libre ? distritoMasCercano(centro).distrito : undefined);
       if (!d) continue;
       if (op.soloDentroDe && !puntoEnPoligonos(centro, op.soloDentroDe)) continue;
-      celdas.push(construirCelda(i, j, resM, op.fecha, op.cfg ?? null, d));
+      celdas.push(construirCelda(i, j, resM, op.fecha, op.cfg ?? null, d, op.coberturaFija));
       if (celdas.length > max) return { celdas, res_m: resM, recortado: true };
     }
   }

@@ -101,3 +101,10 @@ node --import ./src/lib/agro/__tests__/registro.mjs --test src/lib/agro/__tests_
 Flujo para el frontend: `zonas` → centrar mapa → `celdas` por `moveend` (zoom ≥ 11) → el agricultor dibuja el polígono → `POST /api/lote` → pintar `celdas` del lote por `aptitud` y mostrar `analisis` + `sectores`.
 
 Tests del mapa: `node --import ./src/lib/agro/__tests__/registro.mjs --test src/lib/mapa/__tests__/mapa.test.mjs`
+
+## Cambios del 14-nov (noche)
+- **Fecha por defecto = hoy** (hora de Paraguay), ya no la de la última pasada. La temporada y los consejos son para el día en que se abre la app.
+- **`humedad`** usa la última pasada NISAR disponible aunque esté fuera de la ventana de 10 días, y agrega
+  `dias_desde_observacion` (antigüedad del dato) y `desactualizada` (`true` si pasa de 24 días, SUPUESTO).
+- **`POST /api/lote`** analiza el lote en cualquier lugar: usa la grilla NISAR real de `public/data/grilla/` (índice en `index.json`)
+  y trata el lote como cultivable (no hay capa real de cobertura). Fuera de las áreas con grilla, la humedad es ficticia y `es_ejemplo: true`.

@@ -13,7 +13,7 @@ import { clasificarTemporada, esSiembraTardia } from "./temporada";
 import { cuandoSembrar } from "./ventana";
 
 export interface EntradaAnalisis {
-  fecha?: string; // fecha de referencia (por defecto: última observación NISAR)
+  fecha?: string; // fecha de referencia (por defecto: hoy, hora de Paraguay)
   fecha_siembra?: string; // si ya se sembró → modo seguimiento
   ciclo?: string;
   suelo?: SueloInput;
@@ -32,8 +32,14 @@ function estadoGeneral(alertas: Alerta[], humedadSinDatos: boolean): EstadoGener
   return "sembrar";
 }
 
-export function fechaReferencia(serie: SerieHumedad | null, fecha?: string): string {
-  return fecha ?? serie?.serie.at(-1)?.fecha ?? new Date().toISOString().slice(0, 10);
+/** Hoy en Paraguay (UTC−3), AAAA-MM-DD. */
+export const hoyPY = () => new Date(Date.now() - 3 * 3_600_000).toISOString().slice(0, 10);
+
+// La fecha del análisis es HOY: la temporada y los consejos son para el día en que el agricultor abre la app.
+// La humedad usa la última pasada NISAR disponible (ver resumirHumedad: informa su antigüedad).
+// (`serie` se mantiene en la firma por compatibilidad con quienes ya la llaman.)
+export function fechaReferencia(_serie: SerieHumedad | null, fecha?: string): string {
+  return fecha ?? hoyPY();
 }
 
 export function analizar(cfg: CultivoConfig, serie: SerieHumedad | null, entrada: EntradaAnalisis = {}): Analisis {
