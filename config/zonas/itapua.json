@@ -1,0 +1,30 @@
+{
+  "_estado": "APROXIMADO — los límites de los distritos son rectángulos/polígonos dibujados a mano alrededor del centro urbano. Reemplazar con los límites oficiales (INE/DGEEC o Ley 3683 para Bella Vista) cuando el rol Datos los cargue.",
+  "_fuente_centros": "Wikipedia (centros urbanos): San Rafael del Paraná 26°39′S 54°56′W; Bella Vista 27°02′S 55°35′W. Superficie de Bella Vista ≈ 285 km² (Wikipedia).",
+  "departamento": "Itapúa",
+  "crs": "WGS84 [lon, lat]",
+  "distritos": [
+    {
+      "id": "san_rafael_del_parana",
+      "nombre": "San Rafael del Paraná",
+      "centro": [-54.93, -26.65],
+      "superficie_km2_aprox": 800,
+      "es_aproximado": true,
+      "poligono": [[[-55.07, -26.52], [-54.76, -26.52], [-54.76, -26.80], [-55.07, -26.80], [-55.07, -26.52]]],
+      "centros_urbanos": [{ "nombre": "San Rafael del Paraná", "lonlat": [-54.93, -26.65], "radio_km": 1.5 }],
+      "cultivos_principales": ["soja", "maiz", "mandioca"],
+      "nota": "Noreste de Itapúa, zona sojera. Área de referencia del contrato de humedad más cercana: 'natalio' / 'noreste'."
+    },
+    {
+      "id": "bella_vista",
+      "nombre": "Bella Vista",
+      "centro": [-55.583, -27.033],
+      "superficie_km2_aprox": 285,
+      "es_aproximado": true,
+      "poligono": [[[-55.68, -26.95], [-55.49, -26.95], [-55.49, -27.12], [-55.68, -27.12], [-55.68, -26.95]]],
+      "centros_urbanos": [{ "nombre": "Bella Vista", "lonlat": [-55.583, -27.033], "radio_km": 1.8 }],
+      "cultivos_principales": ["soja", "maiz", "mandioca"],
+      "nota": "Centro de Itapúa, colonia fundada en 1918. Área de referencia del contrato de humedad más cercana: 'obligado_hohenau_miranda'."
+    }
+  ]
+}

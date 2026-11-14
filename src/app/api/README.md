@@ -85,3 +85,19 @@ Se mantiene igual que en `contracts/recomendacion.schema.json`.
 ```bash
 node --import ./src/lib/agro/__tests__/registro.mjs --test src/lib/agro/__tests__/motor.test.mjs
 ```
+
+## Mapa de campo (San Rafael del Paraná y Bella Vista)
+
+> Grilla SAR **FICTICIA** (determinista) de 200 m sobre los dos distritos, hasta que el pipeline procese NISAR SME2.
+> Límites de distritos **aproximados** (`config/zonas/itapua.json`). Fondo real: imagen satelital Esri y NASA GIBS (HLS 30 m, NDVI MODIS).
+
+| Endpoint | Qué responde |
+|---|---|
+| `GET /api/mapa/demo` | **Página de prueba** del mapa (Leaflet): capas, grilla coloreada por aptitud / humedad / cobertura, dibujo del lote y panel de análisis. Referencia para el frontend, no es la UI final. |
+| `GET /api/mapa/zonas` | GeoJSON de los distritos + `bbox` para centrar el mapa |
+| `GET /api/mapa/celdas?bbox=w,s,e,n&cultivo=soja&fecha=AAAA-MM-DD&res=200` | GeoJSON de celdas con `cobertura` (cultivo/pastura/bosque/agua/urbano), `pendiente_pct`, `humedad_m3m3`, `humedad_estado`, `aptitud` 0–100, `apto`, `motivos`. Si el bbox es grande, sube la resolución (`res_m`) para no pasar de 4000 celdas. |
+| `POST /api/lote` | Ahora arma la **serie SAR de las celdas del lote** (ficticia), devuelve `sectores` (ha aptas, % por cobertura, humedad min/media/max, 3 mejores y peores sectores) y `celdas` en GeoJSON para pintar el lote. Máximo 10 000 ha. |
+
+Flujo para el frontend: `zonas` → centrar mapa → `celdas` por `moveend` (zoom ≥ 11) → el agricultor dibuja el polígono → `POST /api/lote` → pintar `celdas` del lote por `aptitud` y mostrar `analisis` + `sectores`.
+
+Tests del mapa: `node --import ./src/lib/agro/__tests__/registro.mjs --test src/lib/mapa/__tests__/mapa.test.mjs`
