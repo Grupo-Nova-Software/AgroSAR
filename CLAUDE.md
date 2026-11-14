@@ -10,7 +10,8 @@
 - **Desafío:** NASA Space Apps 2026, **"Dancing with the SARs"** (`docs/challenges/05-dancing-with-the-sars.md`). NISAR tiene que ser el **núcleo** de la app (criterio *Relevance*), no un adorno.
 - **Fecha límite:** dom **15-nov-2026 23:59, hora local**. Demo: video ≤30 s con subtítulos en inglés, o ≤7 slides.
 - **Stack:** Next.js 16 (App Router, `cacheComponents`) + React 19 + Tailwind 4 + TypeScript · Supabase (opcional) · Vercel · pnpm (`npx pnpm@11.20.0 …` si no está instalado) · pipeline en Python.
-- **Idioma:** la UI y el README entregables van en **inglés**, con español como segundo idioma para los agricultores. Los docs internos y el código, en español.
+- **Idioma de las respuestas: respondé SIEMPRE en español** al usuario (mensajes, resúmenes, explicaciones), sin excepción.
+- **Idioma del producto:** la UI y el README entregables van en **inglés** (regla de Space Apps), con español como segundo idioma para los agricultores. Esto es solo para lo que se entrega; los docs internos, los comentarios y los mensajes de commit van en español.
 - **La idea es del equipo.** No propongas el enfoque de solución (regla de Space Apps sobre "SI"); implementá y evaluá lo que el equipo decide. Registrá el uso de IA en `docs/SI_USAGE.md`.
 
 ## Datos verificados (2026-11-14) — ver `docs/decision.md` y `docs/limitaciones.md`
