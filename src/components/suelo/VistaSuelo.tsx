@@ -1,29 +1,34 @@
 "use client";
-// Pestaña "Suelo": cultivo + zona → mapa coloreado por el motor del backend, tarjeta de análisis,
-// lote dibujado por el agricultor y gráfico de la serie NISAR.
-// Datos: /data/humedad/*.json (contrato humedad v0, rol Datos) + /api/ranking, /api/analisis, /api/lote (rol Backend).
-import Image from "next/image";
+// Pantalla "Mi suelo": el mapa aéreo grande arriba; abajo, el cartel de recomendación y el gráfico.
+// El cultivo viene de la pantalla de inicio (o del menú). La chacra marcada se guarda en el teléfono.
+// Datos: /data/humedad/*.json (rol Datos) + /api/ranking, /api/analisis, /api/lote, /api/cultivos (rol Backend).
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { EstadoRecomendacion, IndiceHumedad, SerieHumedad } from "@/types/contratos";
 import { CULTIVOS } from "../cultivos";
 import { useIdioma } from "../idioma";
 import Marco from "../Marco";
-import { analizarLote, pedirAnalisis, pedirEstados, type Analisis, type ResultadoLote } from "./api";
+import {
+  analizarLote, dentroDe, hectareasDe, pedirAnalisis, pedirEstados, pedirUmbrales,
+  UMBRALES_DEFECTO, type Analisis, type LonLat, type PoligonoGeoJSON, type ResultadoLote, type UmbralesHumedad,
+} from "./api";
+import Consejo from "./Consejo";
 import GraficoHumedad from "./GraficoHumedad";
-import MapaAreas, { type PoligonoGeoJSON } from "./MapaAreas";
-import TarjetaAnalisis from "./TarjetaAnalisis";
+import MapaCampo from "./MapaCampo";
+
+const CLAVE_CHACRA = "agrosar.chacra";
 
 export default function VistaSuelo({ cultivo: cultivoParam, area: areaParam }: { cultivo?: string; area?: string }) {
   const { t, tr, idioma } = useIdioma();
   const router = useRouter();
 
-  const cultivo = CULTIVOS.find((c) => c.id === cultivoParam)?.id ?? "soja";
+  const cultivoCfg = CULTIVOS.find((c) => c.id === cultivoParam) ?? CULTIVOS[0];
+  const cultivo = cultivoCfg.id;
   const [areas, setAreas] = useState<SerieHumedad[]>([]);
   const [estados, setEstados] = useState<Record<string, EstadoRecomendacion>>({});
-  const [analisis, setAnalisis] = useState<Analisis | undefined>();
-  const [poligono, setPoligono] = useState<PoligonoGeoJSON | null>(null);
-  // Resultado del lote con la "clave" de la consulta que lo produjo; si no coincide con la actual, está cargando.
+  const [umbrales, setUmbrales] = useState<{ cultivo: string; u: UmbralesHumedad }>({ cultivo: "", u: UMBRALES_DEFECTO });
+  const [analisis, setAnalisis] = useState<{ clave: string; datos: Analisis } | null>(null);
+  const [chacra, setChacra] = useState<LonLat[] | null>(null);
   const [loteGuardado, setLoteGuardado] = useState<{ clave: string; datos: ResultadoLote } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const areaId = (areaParam && areas.some((a) => a.id === areaParam) ? areaParam : areas[0]?.id) ?? "";
@@ -31,6 +36,22 @@ export default function VistaSuelo({ cultivo: cultivoParam, area: areaParam }: {
   const actualizarUrl = (cambios: { cultivo?: string; area?: string }) => {
     const p = new URLSearchParams({ cultivo, ...(areaId ? { area: areaId } : {}), ...cambios });
     router.replace(`/suelo?${p.toString()}`, { scroll: false });
+  };
+
+  // Chacra guardada en el teléfono
+  useEffect(() => {
+    try {
+      const v = JSON.parse(localStorage.getItem(CLAVE_CHACRA) ?? "null");
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorage solo existe en el navegador
+      if (Array.isArray(v) && v.length >= 3) setChacra(v);
+    } catch {}
+  }, []);
+  const cambiarChacra = (v: LonLat[] | null) => {
+    setChacra(v);
+    try {
+      if (v) localStorage.setItem(CLAVE_CHACRA, JSON.stringify(v));
+      else localStorage.removeItem(CLAVE_CHACRA);
+    } catch {}
   };
 
   // Áreas y series NISAR (una vez)
@@ -45,169 +66,133 @@ export default function VistaSuelo({ cultivo: cultivoParam, area: areaParam }: {
     })();
   }, []);
 
-  // Estados de todas las áreas para colorear el mapa
+  // Por cultivo: estado de cada zona y límites de seco / bueno / mojado
   useEffect(() => {
-    if (!areas.length) return;
     let vigente = true;
-    pedirEstados(areas.map((a) => a.id), cultivo, idioma)
-      .then((e) => vigente && setEstados(e))
-      .catch((e) => vigente && setError((e as Error).message));
+    pedirEstados(cultivo).then((e) => vigente && setEstados(e)).catch((e) => vigente && setError((e as Error).message));
+    pedirUmbrales(cultivo).then((u) => vigente && setUmbrales({ cultivo, u }));
     return () => {
       vigente = false;
     };
-  }, [areas, cultivo, idioma]);
+  }, [cultivo]);
 
-  // Análisis completo del área elegida
+  // Análisis de la zona elegida
+  const claveZona = `${areaId}|${cultivo}`;
   useEffect(() => {
     if (!areaId) return;
     let vigente = true;
-    pedirAnalisis(areaId, cultivo, idioma)
-      .then((a) => vigente && setAnalisis(a))
+    pedirAnalisis(areaId, cultivo)
+      .then((a) => vigente && setAnalisis({ clave: `${areaId}|${cultivo}`, datos: a }))
       .catch((e) => vigente && setError((e as Error).message));
     return () => {
       vigente = false;
-      setAnalisis(undefined);
     };
-  }, [areaId, cultivo, idioma]);
+  }, [areaId, cultivo]);
 
-  // Análisis del lote dibujado (se repite si cambia el cultivo o el idioma)
-  const claveLote = poligono ? `${JSON.stringify(poligono.coordinates)}|${cultivo}|${idioma}` : "";
+  // Análisis de la chacra marcada
+  const claveLote = chacra ? `${JSON.stringify(chacra)}|${cultivo}` : "";
   useEffect(() => {
-    if (!poligono) return;
+    if (!chacra) return;
     let vigente = true;
-    analizarLote(poligono, cultivo, idioma)
+    const poligono: PoligonoGeoJSON = { type: "Polygon", coordinates: [[...chacra, chacra[0]]] };
+    analizarLote(poligono, cultivo)
       .then((r) => vigente && setLoteGuardado({ clave: claveLote, datos: r }))
       .catch((e) => vigente && setError((e as Error).message));
     return () => {
       vigente = false;
     };
-  }, [poligono, cultivo, idioma, claveLote]);
-  const lote = poligono && loteGuardado ? loteGuardado.datos : null;
-  const cargandoLote = Boolean(poligono) && loteGuardado?.clave !== claveLote;
+  }, [chacra, cultivo, claveLote]);
 
-  const alTerminarLote = (p: PoligonoGeoJSON | null) => setPoligono(p);
+  // Si el usuario está dentro de una zona y todavía no eligió ninguna, se elige la suya (la más chica que lo contenga).
+  const alUbicar = (p: LonLat) => {
+    if (areaParam) return;
+    const tam = (a: SerieHumedad) => (a.bbox[2] - a.bbox[0]) * (a.bbox[3] - a.bbox[1]);
+    const suya = areas.filter((a) => dentroDe(p, a.bbox)).sort((a, b) => tam(a) - tam(b))[0];
+    if (suya && suya.id !== areaId) actualizarUrl({ area: suya.id });
+  };
 
   const area = areas.find((a) => a.id === areaId);
-  const ultimo = area?.serie.filter((p) => typeof p.humedad_m3m3 === "number").at(-1);
-  const fechaCapas = ultimo?.fecha ?? "2026-10-17";
+  const analisisZona = analisis?.clave === claveZona ? analisis.datos : undefined;
+  const lote = chacra && loteGuardado?.clave === claveLote ? loteGuardado.datos : null;
+  const cargandoLote = Boolean(chacra) && !lote;
+  const loteReal = lote && !lote.analisis.es_ejemplo ? lote : null;
+  const u = umbrales.cultivo === cultivo ? umbrales.u : UMBRALES_DEFECTO;
+  const enFrase = tr(cultivoCfg.enFrase);
+  const ha = useMemo(() => (chacra ? hectareasDe(chacra) : 0), [chacra]);
+  const num = (n: number) => n.toLocaleString(idioma === "es" ? "es-PY" : "en-US", { maximumFractionDigits: n < 10 ? 1 : 0 });
+
+  const selectorZona = (
+    <label className="mt-2 flex items-center gap-2 text-base font-bold text-texto-suave">
+      {t("zona")}
+      <select
+        value={areaId}
+        onChange={(e) => actualizarUrl({ area: e.target.value })}
+        className="h-12 min-w-0 flex-1 rounded-xl border-2 border-borde bg-fondo px-3 text-base font-bold text-texto"
+      >
+        {areas.map((a) => (
+          <option key={a.id} value={a.id}>
+            {a.zona}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
 
   return (
-    <Marco>
-      <section className="text-center md:text-left">
-        <h1 className="font-display text-3xl font-semibold tracking-tight md:text-4xl">{t("sueloTitulo")}</h1>
-        <p className="mt-1 text-sm text-texto-suave">{t("sueloSubtitulo")}</p>
-      </section>
-
-      {/* Selector de cultivo */}
-      <div role="radiogroup" aria-label={t("cultivo")} className="mt-5 flex flex-wrap justify-center gap-2 md:justify-start">
-        {CULTIVOS.map((c) => {
-          const sel = c.id === cultivo;
-          return (
-            <button
-              key={c.id}
-              role="radio"
-              aria-checked={sel}
-              onClick={() => actualizarUrl({ cultivo: c.id })}
-              className={`flex items-center gap-2 rounded-full border py-1 pl-1 pr-4 text-sm font-semibold transition-colors ${
-                sel ? "border-primario bg-primario text-sobre-primario" : "border-borde bg-tarjeta text-texto hover:border-primario"
-              }`}
-            >
-              <Image src={c.imagen} alt="" width={28} height={28} className="h-7 w-7 rounded-full object-cover" />
-              {tr(c.nombre)}
-            </button>
-          );
-        })}
-      </div>
-
-      {error && <p className="mt-6 text-sm text-peligro">Error: {error}</p>}
-
-      <div className="mt-6 grid gap-5 md:grid-cols-5">
-        <div className="md:col-span-3">
+    <Marco variante="compacta" cultivo={cultivo}>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-5 md:gap-5 md:px-8">
+        <div className="min-w-0 md:col-span-3">
           {areas.length ? (
-            <MapaAreas
+            <MapaCampo
               areas={areas}
               estados={estados}
-              seleccionada={areaId}
+              seleccionada={loteReal ? "" : areaId}
               alSeleccionar={(id) => actualizarUrl({ area: id })}
-              fechaCapas={fechaCapas}
-              alTerminarLote={alTerminarLote}
+              chacra={chacra}
+              alCambiarChacra={cambiarChacra}
+              alUbicar={alUbicar}
             />
           ) : (
-            <div className="grid h-80 place-items-center rounded-2xl border border-borde bg-tarjeta text-sm text-texto-suave md:h-[28rem]">
+            <div className="grid h-[62svh] min-h-[22rem] place-items-center bg-tarjeta text-lg text-texto-suave md:h-[34rem] md:rounded-3xl">
               {t("cargando")}
             </div>
           )}
-          {/* Selector accesible de zona (alternativa al mapa) */}
-          <label className="mt-3 flex items-center gap-2 text-sm text-texto-suave">
-            {t("zona")}
-            <select
-              value={areaId}
-              onChange={(e) => actualizarUrl({ area: e.target.value })}
-              className="flex-1 rounded-lg border border-borde bg-tarjeta px-3 py-2 text-texto"
-            >
-              {areas.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.zona}
-                </option>
-              ))}
-            </select>
-          </label>
+        </div>
 
-          {/* Resultado del lote dibujado */}
-          {(lote || cargandoLote) && (
-            <section className="mt-4 rounded-2xl border-2 border-primario/40 bg-tarjeta p-5">
-              <p className="text-xs font-semibold uppercase tracking-wider text-texto-suave">{t("tuLote")}</p>
-              {cargandoLote || !lote ? (
-                <p className="mt-2 text-sm text-texto-suave">{t("analizandoLote")}</p>
-              ) : (
-                <>
-                  <h2 className="font-display text-2xl font-semibold">
-                    {lote.lote.hectareas.toLocaleString(idioma === "es" ? "es-PY" : "en-US")} {t("hectareas")}
-                  </h2>
-                  {lote.lote.area_referencia && (
-                    <p className="text-xs text-texto-suave">
-                      {t("areaReferencia")}: {lote.lote.area_referencia.zona}
-                    </p>
-                  )}
-                  <TarjetaAnalisis analisis={lote.analisis} />
-                </>
-              )}
-            </section>
+        <div className="min-w-0 space-y-4 px-3 md:col-span-2 md:px-0">
+          {error && <p className="rounded-2xl bg-peligro/15 px-4 py-3 text-base font-bold text-peligro">Error: {error}</p>}
+
+          {cargandoLote && (
+            <p className="rounded-3xl border border-borde bg-tarjeta p-5 text-lg font-bold text-texto-suave">{t("analizando")}</p>
+          )}
+
+          {loteReal ? (
+            <Consejo titulo={`${t("tuChacra")} · ${num(ha)} ${t("hectareas")}`} analisis={loteReal.analisis} umbrales={u} cultivo={enFrase} />
+          ) : (
+            <>
+              {lote && <p className="rounded-2xl bg-dorado/20 px-4 py-3 text-base font-bold">{t("sinDatosAqui")}</p>}
+              <Consejo titulo={`${t("zonaDe")} ${area?.zona ?? ""}`} analisis={analisisZona} umbrales={u} cultivo={enFrase}>
+                {selectorZona}
+              </Consejo>
+              {!chacra && <p className="px-1 text-base text-texto-suave">👆 {t("pistaChacra")}</p>}
+            </>
           )}
         </div>
 
-        {/* Tarjeta de la zona elegida */}
-        <aside className="rounded-2xl border border-borde bg-tarjeta p-5 md:col-span-2">
-          <p className="text-xs font-semibold uppercase tracking-wider text-texto-suave">{t("zona")}</p>
-          <h2 className="font-display text-2xl font-semibold leading-tight">{area?.zona ?? "—"}</h2>
-
-          <p className="mt-5 text-xs font-semibold uppercase tracking-wider text-texto-suave">{t("recomendacion")}</p>
-          <TarjetaAnalisis analisis={analisis} />
-
-          <dl className="mt-3 grid grid-cols-2 gap-3">
-            <div className="rounded-xl bg-tarjeta-2 p-3">
-              <dt className="text-xs text-texto-suave">{t("retrodispersion")}</dt>
-              <dd className="font-display text-xl font-semibold text-acento">
-                {typeof ultimo?.hv_db === "number" ? ultimo.hv_db.toFixed(1) : "—"} <span className="text-xs font-normal">dB</span>
-              </dd>
-            </div>
-            <div className="rounded-xl bg-tarjeta-2 p-3">
-              <dt className="text-xs text-texto-suave">{t("observaciones")}</dt>
-              <dd className="font-display text-xl font-semibold text-acento">{area?.serie.length ?? 0}</dd>
-            </div>
-          </dl>
-
-          <p className="mt-4 text-[11px] leading-relaxed text-texto-suave">
-            {t("fuente")}: <strong className={area?.es_ejemplo ? "text-dorado" : "text-acento"}>{area?.fuente ?? "—"}</strong>. {t("umbralesSupuestos")}
-          </p>
-        </aside>
+        <section className="mx-3 min-w-0 rounded-3xl border border-borde bg-tarjeta p-4 md:col-span-5 md:mx-0 md:p-5">
+          <h2 className="font-display text-2xl font-bold">{t("graficoTitulo")}</h2>
+          <p className="mt-1 text-base text-texto-suave">{t("graficoSub", { cultivo: enFrase })}</p>
+          <div className="mt-3">
+            {loteReal?.serie?.length ? (
+              <GraficoHumedad serie={loteReal.serie} umbrales={u} />
+            ) : area ? (
+              <GraficoHumedad serie={area.serie} umbrales={u} />
+            ) : (
+              <p className="text-base text-texto-suave">{t("cargando")}</p>
+            )}
+          </div>
+        </section>
       </div>
-
-      {/* Serie temporal */}
-      <section className="mt-6 rounded-2xl border border-borde bg-tarjeta p-5">
-        <h2 className="font-display text-xl font-semibold">{t("serieTitulo")}</h2>
-        <div className="mt-3">{area ? <GraficoHumedad serie={area.serie} /> : <p className="text-sm text-texto-suave">{t("cargando")}</p>}</div>
-      </section>
     </Marco>
   );
 }

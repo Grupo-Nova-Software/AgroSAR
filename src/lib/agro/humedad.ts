@@ -4,6 +4,8 @@ import type { SerieHumedad } from "@/types/contratos";
 import type { EstadoHumedad, ResumenHumedad, UmbralesHumedad } from "./tipos";
 import { diasEntre } from "./fechas";
 
+export const DIAS_DATO_VIEJO = 24; // SUPUESTO: más de 2 revisitas de NISAR (12 días) sin dato nuevo
+
 export function clasificarHumedad(valor: number | null, u: UmbralesHumedad): EstadoHumedad {
   if (valor === null) return "sin_datos";
   if (valor < u.seco_max) return "seco";
@@ -28,22 +30,28 @@ export function resumirHumedad(
   calidadMinima = "buena",
 ): ResumenHumedad {
   const base = { ventana_dias: ventanaDias, fuente: serie?.fuente ?? "sin datos" };
-  if (!serie) return { ...base, estado: "sin_datos", media_m3m3: null, n_observaciones: 0, ultima_fecha: null, tendencia: null };
+  const vacio = { ...base, estado: "sin_datos" as const, media_m3m3: null, n_observaciones: 0, ultima_fecha: null, tendencia: null, dias_desde_observacion: null, desactualizada: false };
+  if (!serie) return vacio;
 
   const desde = new Date(new Date(`${hasta}T00:00:00Z`).getTime() - ventanaDias * 86_400_000).toISOString().slice(0, 10);
-  const obs = validos(serie, desde, hasta, calidadMinima);
-  if (obs.length === 0) {
-    return { ...base, estado: "sin_datos", media_m3m3: null, n_observaciones: 0, ultima_fecha: null, tendencia: null };
-  }
+  let obs = validos(serie, desde, hasta, calidadMinima);
+  // El satélite publica con demora: si no hay pasadas dentro de la ventana, se usa la ÚLTIMA disponible
+  // y se informa su antigüedad para que la app lo diga con claridad.
+  if (obs.length === 0) obs = validos(serie, "0000-01-01", hasta, calidadMinima).slice(-1);
+  if (obs.length === 0) return vacio;
 
   const media = Number((obs.reduce((s, p) => s + p.humedad_m3m3, 0) / obs.length).toFixed(3));
+  const ultima = obs.at(-1)!.fecha;
+  const dias = Math.max(0, diasEntre(ultima, hasta));
   return {
     ...base,
     estado: clasificarHumedad(media, u),
     media_m3m3: media,
     n_observaciones: obs.length,
-    ultima_fecha: obs.at(-1)!.fecha,
+    ultima_fecha: ultima,
     tendencia: tendencia(serie, hasta, calidadMinima),
+    dias_desde_observacion: dias,
+    desactualizada: dias > DIAS_DATO_VIEJO,
   };
 }
 

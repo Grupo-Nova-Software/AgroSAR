@@ -24,3 +24,11 @@
 ## Técnicas
 - Web estática: los JSON se generan antes de desplegar y no se actualizan solos.
 - Requiere internet para los mapas base (OpenStreetMap) y las librerías (CDN).
+
+## Actualización del 14-nov (noche)
+- **Serie real:** 10 pasadas del track 82 (19-jun → 17-oct-2026). La última tiene **28 días** al 14-nov: la app lo dice en el cartel ("dato viejo") y no reemplaza mirar el suelo.
+- **Análisis de la chacra:** usa las celdas NISAR de 200 m solo dentro de las 5 áreas con grilla publicada. Fuera de ellas no hay dato real y la app muestra la zona más cercana.
+- **Mapa "Agua en el suelo":** imagen a ~300 m de todo Itapúa; el borde oeste queda sin dato porque ahí termina la pasada del track 82.
+- **Cobertura del suelo y pendiente** de la grilla del backend siguen siendo ficticias; la app ya no las muestra al agricultor.
+- **Textos de consejos del motor** (alertas) están solo en español; en inglés se muestran solo los textos propios de la interfaz.
+- **Límites de zonas y distritos:** rectángulos aproximados (Hohenau cae dentro del rectángulo de "Bella Vista").

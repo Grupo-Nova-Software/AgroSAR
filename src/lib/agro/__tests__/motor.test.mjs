@@ -68,9 +68,24 @@ test("humedad: clasificación con umbrales de soja", () => {
   assert.equal(clasificarHumedad(null, soja.humedad), "sin_datos");
 });
 
-test("humedad: sin observaciones en la ventana → sin_datos", () => {
+test("humedad: sin observaciones en la ventana → usa la última pasada y avisa su antigüedad", () => {
   const r = resumirHumedad(serie(0.3, ["2026-08-01"]), "2026-10-01", soja.humedad, 10);
+  assert.equal(r.estado, "optimo");
+  assert.equal(r.ultima_fecha, "2026-08-01");
+  assert.equal(r.dias_desde_observacion, 61);
+  assert.equal(r.desactualizada, true);
+});
+
+test("humedad: una pasada reciente no se marca como desactualizada", () => {
+  const r = resumirHumedad(serie(0.3, ["2026-09-28"]), "2026-10-01", soja.humedad, 10);
+  assert.equal(r.dias_desde_observacion, 3);
+  assert.equal(r.desactualizada, false);
+});
+
+test("humedad: sin ninguna pasada anterior a la fecha → sin_datos", () => {
+  const r = resumirHumedad(serie(0.3, ["2026-08-01"]), "2026-07-01", soja.humedad, 10);
   assert.equal(r.estado, "sin_datos");
+  assert.equal(r.dias_desde_observacion, null);
 });
 
 test("humedad: ignora observaciones dudosas", () => {

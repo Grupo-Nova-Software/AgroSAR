@@ -8,7 +8,8 @@ Formato (compacto, una matriz por fecha, filas de norte a sur, columnas de oeste
     lat: [lat del centro de cada fila], lon: [lon del centro de cada columna],
     fechas: ["AAAA-MM-DD", ...],
     humedad: { "AAAA-MM-DD": [[0.231, null, ...], ...] },   # m³/m³, null = sin dato / agua / no válida
-    recomendada: { "AAAA-MM-DD": [[1, 0, ...], ...] } }     # 1 = celda "recomendada" por NISAR
+    recomendada: {...} }   # OPCIONAL (--con-recomendada): 1 = celda "recomendada" por NISAR
+Además escribe public/data/grilla/index.json con el bbox y las fechas de cada área.
 Mismo criterio que 03_procesar_nisar.py (agua excluida, _FillValue → null). Si dos escenas del mismo track
 caen el mismo día, gana la que tiene más celdas válidas.
 
@@ -38,6 +39,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--track", type=int, default=82)
     ap.add_argument("--areas", default=",".join(ZONAS))
+    ap.add_argument("--con-recomendada", action="store_true", help="incluir la matriz 0/1 de celdas recomendadas (duplica el peso)")
     args = ap.parse_args()
     areas = [a for a in args.areas.split(",") if a in ZONAS]
 
@@ -76,19 +78,27 @@ def main():
                 if o["_validas"].get(fecha, -1) >= int(valida.sum()):
                     continue  # ya hay una escena mejor para ese día
                 o["_validas"][fecha] = int(valida.sum())
-                o["humedad"][fecha] = [[round(float(v), 3) if ok else None for v, ok in zip(fila, okf)]
+                # 2 decimales: la precisión objetivo de SME2 es 0,06 m³/m³, y el archivo pesa bastante menos.
+                o["humedad"][fecha] = [[round(float(v), 2) if ok else None for v, ok in zip(fila, okf)]
                                        for fila, okf in zip(sm, valida)]
-                o["recomendada"][fecha] = recom.astype(int).tolist()
+                if args.con_recomendada:
+                    o["recomendada"][fecha] = recom.astype(int).tolist()
 
+    indice = []
     for aid, o in salida.items():
         if o is None:
             print(f"  ⚠ {aid}: sin escenas")
             continue
         del o["_validas"]
+        if not args.con_recomendada:
+            del o["recomendada"]
         o["fechas"] = sorted(o["humedad"])
+        indice.append({"id": aid, "zona": o["zona"], "archivo": f"{aid}.json", "bbox": o["bbox"], "fechas": o["fechas"]})
         ruta = SALIDA / f"{aid}.json"
         ruta.write_text(json.dumps(o, ensure_ascii=False, separators=(",", ":")))
         print(f"  ✔ {aid}: {len(o['lat'])}×{len(o['lon'])} celdas, {len(o['fechas'])} fechas, {ruta.stat().st_size/1e6:.2f} MB")
+    # Índice para que el backend cargue solo la grilla que necesita.
+    (SALIDA / "index.json").write_text(json.dumps({"fuente": FUENTE, "res_m": 200, "areas": indice}, ensure_ascii=False, indent=1))
 
 
 if __name__ == "__main__":

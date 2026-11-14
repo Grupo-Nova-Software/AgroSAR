@@ -25,7 +25,7 @@ export async function GET(request: Request) {
       return error(400, `'res' debe estar entre ${RES_BASE_M} y ${RES_BASE_M * 16} metros`);
     }
 
-    await cargarGrillas(url.origin);
+    await cargarGrillas(url.origin, bbox);
     const { celdas, res_m, recortado } = generarCeldas(bbox, { fecha, cfg, resM: resParam, maxCeldas: 4000 });
     return Response.json({
       ...celdasGeoJSON(celdas),
