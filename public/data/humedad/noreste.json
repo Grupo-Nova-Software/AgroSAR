@@ -1,5 +1,4 @@
 {
- "_aviso": "EJEMPLO FICTICIO — valores inventados para desarrollo, NO son datos NASA reales",
  "id": "noreste",
  "zona": "Noreste: Capitán Meza, Pirapó, Edelira",
  "tipo": "zona",
@@ -9,140 +8,23 @@
   -55.24,
   -26.68
  ],
- "fuente": "EJEMPLO FICTICIO",
- "es_ejemplo": true,
+ "fuente": "NISAR L3 SME2 (provisional) · NASA-ISRO · ASF DAAC",
+ "es_ejemplo": false,
+ "mascara": "Celdas de 200 m con retrievalQualityFlag 'recomendado' y sin agua (waterbodyFraction ≤ 0.5); si hay menos de 50, todas las válidas (calidad 'dudosa').",
  "serie": [
   {
    "fecha": "2026-06-19",
-   "humedad_m3m3": 0.271,
-   "hv_db": -16.2,
-   "calidad": "dudosa"
+   "humedad_m3m3": 0.315,
+   "hv_db": -15.9,
+   "calidad": "buena",
+   "pixeles_validos": 17583
   },
   {
-   "fecha": "2026-06-27",
-   "humedad_m3m3": 0.3,
-   "hv_db": -15.4,
-   "calidad": "dudosa"
-  },
-  {
-   "fecha": "2026-07-05",
-   "humedad_m3m3": 0.316,
-   "hv_db": -15.3,
-   "calidad": "buena"
-  },
-  {
-   "fecha": "2026-07-13",
-   "humedad_m3m3": 0.297,
-   "hv_db": -16.5,
-   "calidad": "dudosa"
-  },
-  {
-   "fecha": "2026-07-17",
-   "humedad_m3m3": 0.283,
-   "hv_db": -16.8,
-   "calidad": "buena"
-  },
-  {
-   "fecha": "2026-07-25",
-   "humedad_m3m3": 0.25,
-   "hv_db": -17.2,
-   "calidad": "buena"
-  },
-  {
-   "fecha": "2026-08-01",
-   "humedad_m3m3": 0.254,
-   "hv_db": -17.1,
-   "calidad": "dudosa"
-  },
-  {
-   "fecha": "2026-08-05",
+   "fecha": "2026-10-17",
    "humedad_m3m3": 0.208,
-   "hv_db": -18.8,
-   "calidad": "buena"
-  },
-  {
-   "fecha": "2026-08-12",
-   "humedad_m3m3": 0.228,
-   "hv_db": -17.5,
-   "calidad": "dudosa"
-  },
-  {
-   "fecha": "2026-08-16",
-   "humedad_m3m3": 0.163,
-   "hv_db": -19.0,
-   "calidad": "buena"
-  },
-  {
-   "fecha": "2026-08-23",
-   "humedad_m3m3": 0.165,
-   "hv_db": -18.9,
-   "calidad": "buena"
-  },
-  {
-   "fecha": "2026-08-28",
-   "humedad_m3m3": 0.191,
-   "hv_db": -18.0,
-   "calidad": "dudosa"
-  },
-  {
-   "fecha": "2026-09-04",
-   "humedad_m3m3": 0.165,
-   "hv_db": -19.6,
-   "calidad": "buena"
-  },
-  {
-   "fecha": "2026-09-08",
-   "humedad_m3m3": 0.171,
-   "hv_db": -18.3,
-   "calidad": "buena"
-  },
-  {
-   "fecha": "2026-09-15",
-   "humedad_m3m3": 0.212,
-   "hv_db": -18.7,
-   "calidad": "buena"
-  },
-  {
-   "fecha": "2026-09-19",
-   "humedad_m3m3": 0.212,
-   "hv_db": -17.7,
-   "calidad": "buena"
-  },
-  {
-   "fecha": "2026-09-24",
-   "humedad_m3m3": 0.248,
-   "hv_db": -17.4,
-   "calidad": "buena"
-  },
-  {
-   "fecha": "2026-10-02",
-   "humedad_m3m3": 0.263,
-   "hv_db": -17.4,
-   "calidad": "dudosa"
-  },
-  {
-   "fecha": "2026-10-06",
-   "humedad_m3m3": 0.264,
-   "hv_db": -17.4,
-   "calidad": "buena"
-  },
-  {
-   "fecha": "2026-10-13",
-   "humedad_m3m3": 0.278,
-   "hv_db": -16.3,
-   "calidad": "buena"
-  },
-  {
-   "fecha": "2026-10-21",
-   "humedad_m3m3": 0.329,
-   "hv_db": -14.4,
-   "calidad": "buena"
-  },
-  {
-   "fecha": "2026-10-25",
-   "humedad_m3m3": 0.285,
-   "hv_db": -16.6,
-   "calidad": "buena"
+   "hv_db": -19.9,
+   "calidad": "buena",
+   "pixeles_validos": 17782
   }
  ]
 }
