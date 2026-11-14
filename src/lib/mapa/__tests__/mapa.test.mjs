@@ -97,3 +97,34 @@ test("sectores: lote más chico que una celda usa la celda del centroide", () =>
   assert.equal(celdas.length, 1);
   assert.equal(celdas[0].distrito, "bella_vista");
 });
+
+// ---------- Grilla NISAR real (rol Datos) ----------
+import { _registrarGrilla, humedadNisar, FUENTE_NISAR } from "../grilla-nisar.ts";
+
+test("grilla NISAR: las celdas y la serie del lote usan la humedad real y quedan marcadas como reales", () => {
+  const d = DISTRITOS[0];
+  const [lo1, la1, lo2, la2] = d.bbox;
+  // Grilla mínima de 3×3 sobre todo el distrito (lat norte→sur, lon oeste→este), 2 fechas.
+  const lat = [la2, (la1 + la2) / 2, la1];
+  const lon = [lo1, (lo1 + lo2) / 2, lo2];
+  const llena = (v) => [[v, v, v], [v, null, v], [v, v, v]];
+  _registrarGrilla({ id: d.id, lat, lon, fechas: ["2026-06-19", "2026-10-17"], humedad: { "2026-06-19": llena(0.3), "2026-10-17": llena(0.2) } });
+  try {
+    // Celda central sin dato → promedio de vecinas
+    assert.equal(humedadNisar([lon[1], lat[1]], "2026-11-01")?.valor, 0.2);
+    // Fecha previa a la primera pasada → usa la primera
+    assert.equal(humedadNisar([lon[0], lat[0]], "2026-01-01")?.fecha_obs, "2026-06-19");
+
+    const { celdas } = generarCeldas([lo1, la1, lo1 + 0.02, la1 + 0.02], { fecha: "2026-10-20", resM: 200 });
+    const utiles = celdas.filter((c) => c.cobertura !== "agua" && c.cobertura !== "urbano");
+    assert.ok(utiles.length > 0);
+    assert.ok(utiles.every((c) => c.fuente_humedad === "nisar" && c.humedad_m3m3 === 0.2));
+
+    const s = serieDeCeldas("lote", "x", d.bbox, celdas, "2026-10-20");
+    assert.equal(s.es_ejemplo, false);
+    assert.equal(s.fuente, FUENTE_NISAR);
+    assert.deepEqual(s.serie.map((p) => p.fecha), ["2026-06-19", "2026-10-17"]);
+  } finally {
+    _registrarGrilla(null);
+  }
+});

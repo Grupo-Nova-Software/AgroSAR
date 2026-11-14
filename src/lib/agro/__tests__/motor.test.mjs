@@ -183,12 +183,13 @@ test("motor: mandioca avisa malezas y heladas de invierno", () => {
   assert.ok(ids.includes("helada:invierno"));
 });
 
-test("motor: con los datos de ejemplo de Natalio funciona para los 3 cultivos", () => {
+test("motor: con la serie publicada de Natalio funciona para los 3 cultivos", () => {
+  // La serie puede ser ficticia o NISAR real (rol Datos): el análisis hereda su marca y su fuente.
   for (const cfg of [soja, maiz, mandioca]) {
     const a = analizar(cfg, natalio, {});
     assert.ok(["sembrar", "esperar", "precaucion"].includes(a.estado), cfg.id);
-    assert.equal(a.es_ejemplo, true);
-    assert.ok(a.fuentes.includes("EJEMPLO FICTICIO"));
+    assert.equal(a.es_ejemplo, natalio.es_ejemplo);
+    assert.ok(a.fuentes.includes(natalio.fuente));
   }
 });
 

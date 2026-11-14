@@ -1,7 +1,7 @@
 // POST /api/lote  (rol Backend)
 // Cuerpo JSON: { poligono: GeoJSON Polygon|MultiPolygon|Feature, cultivo, fecha?, fecha_siembra?, ciclo?,
 //                suelo?: { tipo, ph, fertilidad, drenaje, compactado, pendiente_pct, materia_organica_pct, profundidad, preparado } }
-// El agricultor dibuja sus hectáreas en el mapa; se arma la serie SAR de ESAS celdas (ficticia por ahora),
+// El agricultor dibuja sus hectáreas en el mapa; se arma la serie SAR de ESAS celdas (NISAR real si hay grilla publicada),
 // se analiza el cultivo y se detallan los sectores del lote (dónde conviene más plantar).
 import { cargarTodas } from "@/lib/agro/datos";
 import { leerEntrada } from "@/lib/agro/entrada";
@@ -11,6 +11,7 @@ import { analizar, fechaReferencia } from "@/lib/agro/motor";
 import { celdasGeoJSON } from "@/lib/mapa/celdas";
 import { celdasDelLote, LOTE_MAX_HA, resumirSectores } from "@/lib/mapa/sectores";
 import { serieDeCeldas } from "@/lib/mapa/series";
+import { cargarGrillas } from "@/lib/mapa/grilla-nisar";
 import { distritoDePunto, distritoMasCercano } from "@/lib/mapa/zonas";
 
 export async function POST(request: Request) {
@@ -40,7 +41,8 @@ export async function POST(request: Request) {
     const entrada = leerEntrada(cuerpo);
     const fecha = fechaReferencia(null, entrada.fecha);
 
-    // 1) Celdas SAR del lote y serie temporal propia (ficticia, determinista).
+    // 1) Celdas SAR del lote y serie temporal propia (NISAR real si el rol Datos publicó la grilla).
+    await cargarGrillas(new URL(request.url).origin);
     const { celdas, res_m, bbox } = celdasDelLote(polys, ha, fecha, cfg);
     const centro = centroide(polys);
     const distrito = distritoDePunto(centro);

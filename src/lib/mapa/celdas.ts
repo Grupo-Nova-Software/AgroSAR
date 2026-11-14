@@ -1,17 +1,21 @@
-// Grilla de celdas tipo NISAR (200 m) sobre los distritos. TODO ES FICTICIO y determinista:
-// cobertura del suelo, pendiente y humedad salen de ruido reproducible, no de un satélite.
-// Cuando el rol Datos procese NISAR SME2 (humedad) y una capa de cobertura real, se reemplaza
-// `humedadCelda` / `coberturaCelda` manteniendo la misma forma de salida.
+// Grilla de celdas tipo NISAR (200 m) sobre los distritos.
+// HUMEDAD: real (NISAR SME2) cuando el rol Datos publicó la grilla del distrito (ver grilla-nisar.ts;
+// hay que llamar antes a `cargarGrillas`). Si no hay grilla, se usa el generador ficticio y la celda queda
+// marcada con fuente_humedad = "ficticia".
+// COBERTURA y PENDIENTE: siguen siendo FICTICIAS (ruido reproducible) hasta tener capas reales.
 import type { CultivoConfig, EstadoHumedad } from "@/lib/agro/tipos";
 import { clasificarHumedad } from "@/lib/agro/humedad";
 import { parseISO } from "@/lib/agro/fechas";
 import { fbm, hash } from "./ruido";
 import { type BBox, puntoEnPoligonos } from "./geo";
 import { DISTRITOS, kmACentroUrbano, type Distrito } from "./zonas";
+import { humedadNisar } from "./grilla-nisar";
 import type { Poligono } from "@/lib/agro/lote";
 
 export const RES_BASE_M = 200; // resolución nominal de NISAR SME2
 export const FUENTE_FICTICIA = "EJEMPLO FICTICIO (grilla generada, no es dato NISAR)";
+export const FUENTE_REAL_CELDAS =
+  "Humedad: NISAR L3 SME2 (provisional) · NASA-ISRO · ASF DAAC, celda de 200 m más cercana. Cobertura y pendiente: FICTICIAS (sin capa real todavía).";
 
 export type Cobertura = "cultivo" | "pastura" | "bosque" | "agua" | "urbano";
 
@@ -27,6 +31,8 @@ export interface Celda {
   pendiente_pct: number;
   humedad_m3m3: number;
   humedad_estado: EstadoHumedad;
+  fuente_humedad: "nisar" | "ficticia";
+  fecha_obs?: string; // fecha de la pasada NISAR usada (si es real)
   aptitud: number; // 0–100 para el cultivo pedido
   apto: boolean;
   motivos: string[];
@@ -124,7 +130,8 @@ export function construirCelda(i: number, j: number, resM: number, fecha: string
   const centro: [number, number] = [(bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2];
   const cobertura = coberturaCelda(centro, d);
   const pendiente = pendienteCelda(centro);
-  const humedad = humedadCelda(centro, cobertura, pendiente, fecha);
+  const real = cobertura === "agua" || cobertura === "urbano" ? null : humedadNisar(centro, fecha);
+  const humedad = real?.valor ?? humedadCelda(centro, cobertura, pendiente, fecha);
   const estado = clasificarHumedad(humedad, cfg?.humedad ?? UMBRALES_DEFECTO);
   const { aptitud, motivos } = aptitudCelda(cfg, cobertura, estado, pendiente);
   return {
@@ -137,6 +144,8 @@ export function construirCelda(i: number, j: number, resM: number, fecha: string
     pendiente_pct: pendiente,
     humedad_m3m3: humedad,
     humedad_estado: estado,
+    fuente_humedad: real ? "nisar" : "ficticia",
+    ...(real ? { fecha_obs: real.fecha_obs } : {}),
     aptitud,
     apto: aptitud >= 50,
     motivos,
@@ -194,6 +203,12 @@ export function generarCeldas(bbox: BBox, op: OpcionesGrilla): { celdas: Celda[]
   return { celdas, res_m: resM, recortado };
 }
 
+/** true si alguna celda usa humedad ficticia (para marcar la respuesta como ejemplo). */
+export const hayFicticias = (celdas: Celda[]) => {
+  const utiles = celdas.filter((c) => c.cobertura !== "agua" && c.cobertura !== "urbano");
+  return utiles.length === 0 || utiles.some((c) => c.fuente_humedad === "ficticia");
+};
+
 export function celdasGeoJSON(celdas: Celda[]) {
   return {
     type: "FeatureCollection" as const,
@@ -211,6 +226,8 @@ export function celdasGeoJSON(celdas: Celda[]) {
         pendiente_pct: c.pendiente_pct,
         humedad_m3m3: c.humedad_m3m3,
         humedad_estado: c.humedad_estado,
+        fuente_humedad: c.fuente_humedad,
+        fecha_obs: c.fecha_obs ?? null,
         aptitud: c.aptitud,
         apto: c.apto,
         motivos: c.motivos,
