@@ -1,18 +1,45 @@
-# Instrucciones para Claude Code (AgroSAR Itapúa)
+@AGENTS.md
 
-Equipo de 3 personas, cada una con su propia sesión de Claude Code. **Antes de editar, preguntá o confirmá el rol del usuario** y respetá la tabla de abajo. Plan completo: `docs/plan-equipo.md`.
+# AgroSAR Itapúa — instrucciones para Claude Code
 
-| Rol | Puede editar | NO toca |
-|---|---|---|
-| Datos | `pipeline/`, `data/processed/humedad/` | `app/`, `backend/`, `config/` |
-| Backend | `backend/`, `config/`, `data/processed/recomendaciones/` | `app/`, `pipeline/` |
-| Frontend | `app/` | `pipeline/`, `backend/`, `config/`, `data/` |
+> `AGENTS.md` (importado arriba) trae las **reglas del evento** y las convenciones de Next.js 16. Son obligatorias.
+> Si hay diferencias de estructura, **este archivo manda** para este proyecto.
 
-Reglas:
-- `contracts/`, `docs/` y `README.md` son compartidos: proponé el cambio y que se haga por PR revisado por el equipo. No los modifiques por tu cuenta.
-- Trabajá siempre en una rama con prefijo de rol (`datos/…`, `back/…`, `front/…`). Nunca hagas commit ni push a `main`, ni `push --force`.
-- Antes de commitear: `git status` y agregá solo los archivos propios (nada de `git add -A` a ciegas).
-- Nunca escribas credenciales en archivos. Earthdata va por `~/.netrc` o por `EARTHDATA_USERNAME`/`EARTHDATA_PASSWORD`.
-- No descargues archivos grandes (GCOV ~2 GB c/u) sin confirmación explícita.
-- No inventes datos. Todo dato de ejemplo debe decir "EJEMPLO FICTICIO". Los supuestos se marcan "SUPUESTO".
-- Idioma del proyecto: español (el formulario y el pitch de Space Apps, en inglés).
+## Proyecto (tenelo siempre en cuenta)
+- **Qué es:** una PWA (web instalable en el celular) para agricultores de **Itapúa, Paraguay**. Muestra la humedad del suelo medida por el radar **NASA-ISRO NISAR** en las zonas o distritos agrícolas, con foco en los cultivos principales (soja primero), y da una orientación simple: **sembrar / esperar / precaución**, con el porqué.
+- **Desafío:** NASA Space Apps 2026, **"Dancing with the SARs"** (`docs/challenges/05-dancing-with-the-sars.md`). NISAR tiene que ser el **núcleo** de la app (criterio *Relevance*), no un adorno.
+- **Fecha límite:** dom **15-nov-2026 23:59, hora local**. Demo: video ≤30 s con subtítulos en inglés, o ≤7 slides.
+- **Stack:** Next.js 16 (App Router, `cacheComponents`) + React 19 + Tailwind 4 + TypeScript · Supabase (opcional) · Vercel · pnpm (`npx pnpm@11.20.0 …` si no está instalado) · pipeline en Python.
+- **Idioma:** la UI y el README entregables van en **inglés**, con español como segundo idioma para los agricultores. Los docs internos y el código, en español.
+- **La idea es del equipo.** No propongas el enfoque de solución (regla de Space Apps sobre "SI"); implementá y evaluá lo que el equipo decide. Registrá el uso de IA en `docs/SI_USAGE.md`.
+
+## Datos verificados (2026-11-14) — ver `docs/decision.md` y `docs/limitaciones.md`
+- **NISAR SME2** (humedad, L3, 200 m, **provisional**, precisión objetivo 0,06 m³/m³): sobre todo Itapúa hay 105 archivos y 53 fechas (18-jun → 21-oct), ~117 MB cada uno, **10,7 GB** en total.
+- **NISAR GCOV** (retrodispersión HH/HV, L2): 127 archivos, ~1,9 GB cada uno, **316 GB** en total. **Nunca descargues en masa.**
+- Descargar requiere login Earthdata. NASA POWER y Open-Meteo no lo requieren. Open-Meteo **no** es dato NASA.
+- Los umbrales de `config/umbrales.json` son **SUPUESTOS**.
+
+## Roles y carpetas — editá SOLO las carpetas del rol del usuario
+**Al empezar la sesión, preguntá el rol si no lo sabés.** Si una tarea requiere tocar la carpeta de otro rol, avisá y proponé el cambio; no lo hagas.
+
+| Rol | Puede editar |
+|---|---|
+| **Datos** | `pipeline/`, `public/data/humedad/`, `data/` (local, ignorado) |
+| **Backend** | `src/app/api/`, `src/lib/`, `supabase/`, `config/` |
+| **Frontend** | `src/app/` (excepto `api/`), `src/components/`, `public/` (excepto `public/data/`) |
+| **Compartido (solo por PR aprobado por los 3)** | `contracts/`, `src/types/contratos.ts`, `docs/`, `README.md`, `CLAUDE.md`, `AGENTS.md`, `package.json`, `pnpm-lock.yaml`, `next.config.ts`, `.gitignore` |
+
+Los contratos de datos (`contracts/`) definen qué produce cada rol. Respetalos al escribir y al leer.
+
+## Git
+- Nunca hagas commit ni push a `main`. Trabajá en una rama `datos/…`, `back/…` o `front/…` y abrí un PR.
+- `git pull --rebase origin main` antes de empezar y antes del PR. Nunca `push --force` sobre ramas ajenas.
+- Antes de commitear, revisá `git status` y agregá solo los archivos del rol (no uses `git add -A` a ciegas).
+- Dependencias nuevas: `package.json` y `pnpm-lock.yaml` van juntos en un PR propio y chico. Si el lockfile tiene conflicto, quedate con el de `main` y corré `pnpm install`.
+- Antes de dar algo por terminado: `pnpm lint && pnpm build` (JS) o ejecutar el script (Python).
+
+## Reglas duras
+- Credenciales nunca en archivos: van en `.env.local` (ignorado), `~/.netrc` o variables de entorno.
+- No descargues más de ~1 GB sin confirmación explícita del usuario.
+- No inventes datos. Lo ficticio lleva `"es_ejemplo": true` y la fuente "EJEMPLO FICTICIO", y la UI muestra el aviso de datos provisionales.
+- Sin logos de NASA. Sin imágenes ni voces de menores de 18 años. Citar todas las fuentes.

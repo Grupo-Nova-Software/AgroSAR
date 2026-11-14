@@ -1,42 +1,41 @@
 # AgroSAR Itapúa
 
-> ⚠️ **Estado: MVP con DATOS DE EJEMPLO (ficticios).** Los JSON de `data/processed/` son sintéticos hasta que se ejecute el procesamiento NISAR.
+> ⚠️ **Status: work in progress (NASA Space Apps 2026).** The data in `public/data/humedad/` is **FICTITIOUS sample data** until NISAR processing is complete.
 
-Web estática para agricultores de Itapúa (Paraguay). Muestra cómo cambian en el tiempo la **humedad del suelo** y la **retrodispersión** de radar de los cultivos en 3 zonas agrícolas, y ofrece una orientación simple: **sembrar / esperar / precaución**. Proyecto del NASA Space Apps 2026 (el desafío elegido está en `docs/decision.md`).
+A Progressive Web App (installable on phones) that shows farmers in **Itapúa, Paraguay** how **soil moisture** changes over time in their agricultural areas, using radar data from the **NASA-ISRO NISAR** mission, and gives simple guidance: **sow / wait / caution**.
 
-**Zonas:** Natalio · Noreste (Capitán Meza, Pirapó, Edelira) · Obligado / Hohenau / Capitán Miranda.
+Challenge: **Dancing with the SARs**, NASA Space Apps Challenge 2026.
 
-## Datos
-| Fuente | Uso | Acceso |
+## Data
+| Source | Use | Access |
 |---|---|---|
-| NISAR L3 **SME2** (humedad del suelo, 200 m, *provisional*) | Serie principal `humedad_m3m3` | ASF DAAC, login Earthdata |
-| NISAR L2 **GCOV** (retrodispersión HH/HV) | Serie `hv_db` (vegetación/cultivo) | ASF DAAC, login Earthdata, ~2 GB/archivo |
-| NASA POWER | Contexto: lluvia y temperatura | API pública, sin login |
-| SMAP L3, GPM IMERG | Comparación opcional | Login Earthdata |
+| NISAR L3 **SME2** soil moisture (200 m, *provisional*) | Main time series | ASF DAAC, Earthdata Login |
+| NISAR L2 **GCOV** backscatter (HH/HV) | Crop/vegetation signal (selected scenes) | ASF DAAC, Earthdata Login |
+| NASA POWER | Rainfall and temperature context | Public API |
 
-Esquema de cada zona (`data/processed/<id>.json`):
-```json
-{"zona": "...", "bbox": [lon_min, lat_min, lon_max, lat_max],
- "serie": [{"fecha": "AAAA-MM-DD", "humedad_m3m3": 0.25, "hv_db": -17.0, "calidad": "buena|dudosa"}]}
-```
-`data/processed/index.json` lista las zonas que carga la web.
+All sources are cited in the app. NISAR soil moisture is a **provisional** product (partially validated).
 
-## Cómo correr
-**Web** (sin compilación; hay que servirla desde la raíz del repo para que lea `/data` y `/config`):
+## Run locally
 ```bash
-python3 -m http.server 8000     # luego abrir http://localhost:8000/src/
+npx pnpm@11.20.0 install
+cp .env.example .env.local          # optional: Supabase, NASA keys
+npx pnpm@11.20.0 dev                # http://localhost:3000
 ```
-Vercel: importar el repo sin framework y sin comando de build; `vercel.json` redirige `/` a `src/index.html`.
+API: `GET /api/recomendacion?area=natalio&cultivo=soja`
 
-**Scripts de datos:**
+Data pipeline (Python):
 ```bash
-python3 -m venv .venv && . .venv/bin/activate && pip install -r scripts/requirements.txt
-python scripts/01_listar_nisar.py          # solo lista, sin login
-python scripts/04_contexto_power.py        # NASA POWER, sin login
-python scripts/02_descargar_nisar.py --zona natalio --tipo SME2 --max 3   # requiere Earthdata; pide confirmación
-python scripts/03_procesar_nisar.py        # ESQUELETO: falta implementarlo
+python3 -m venv .venv && . .venv/bin/activate && pip install -r pipeline/requirements.txt
+python pipeline/01_listar_nisar.py     # list NISAR products (no login)
+python pipeline/04_contexto_power.py   # NASA POWER (no login)
+python pipeline/02_descargar_nisar.py --zona natalio --tipo SME2 --max 3   # needs Earthdata (~/.netrc)
 ```
-**Credenciales:** nunca en el código. Usar `~/.netrc` (`machine urs.earthdata.nasa.gov login … password …`, `chmod 600`) o las variables de entorno `EARTHDATA_USERNAME` / `EARTHDATA_PASSWORD`.
 
-## Limitaciones
-Ver [`docs/limitaciones.md`](docs/limitaciones.md). En resumen: datos NISAR provisionales, umbrales **SUPUESTOS**, sin validación de campo, bbox aproximadas, y la orientación **no** reemplaza al técnico agrícola.
+## Limitations
+Provisional NISAR data, decision thresholds that are **assumptions** (not yet agronomically validated), and approximate area boundaries. This tool supports and **does not replace** advice from local agronomists. Details (in Spanish): `docs/limitaciones.md`.
+
+## Team docs (Spanish)
+`docs/plan-equipo.md` (roles and workflow) · `docs/decision.md` · `contracts/` (data contracts) · `docs/SI_USAGE.md`
+
+## Credits & license
+MIT. Based on [nasa-space-apps-starter-template](https://github.com/marcosferr/nasa-space-apps-starter-template) (MIT). Community project, not affiliated with or endorsed by NASA.

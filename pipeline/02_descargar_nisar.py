@@ -6,7 +6,7 @@ Credenciales: NUNCA en el código. earthaccess las toma de:
 
 Tamaños verificados (2026-11-14): SME2 ~123 MB/archivo (~3,9 GB todo Itapúa, 6 meses);
 GCOV ~2 GB/archivo (~84 GB). Por defecto solo SME2 y pide confirmación antes de bajar.
-Uso: python scripts/02_descargar_nisar.py --tipo SME2 --zona natalio [--max 5]
+Uso: python pipeline/02_descargar_nisar.py --tipo SME2 --zona natalio [--max 5]
 """
 import argparse, json, pathlib
 import earthaccess

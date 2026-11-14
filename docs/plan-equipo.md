@@ -1,51 +1,78 @@
-# Plan del equipo — Desafío A (NISAR) · cultivos de Itapúa
+# Plan del equipo — AgroSAR Itapúa (desafío A, NISAR)
 
-> Decidido: desafío **A, Dancing with the SARs**. Fecha límite: **15-nov 23:59, hora local**. **C** = confirmado · **S** = supuesto.
+> Fecha límite: **dom 15-nov 23:59, hora local**. Reglas para Claude Code: `CLAUDE.md`.
 
-## 1. Idea integrada
-**"¿Cómo está la humedad del suelo donde se siembra soja (y los demás cultivos principales) en todo Itapúa, y qué conviene hacer?"**
+## 1. Mapa del repo: qué es cada cosa
+```
+AgroSAR/
+├── CLAUDE.md, AGENTS.md     Instrucciones para Claude Code (proyecto + reglas del evento)   [compartido]
+├── README.md                Presentación del proyecto, EN INGLÉS (es entregable)          [compartido]
+├── contracts/               Formato acordado de los datos entre roles (JSON Schema)       [compartido]
+├── docs/                    Decisión, plan, limitaciones, calendario, pitch, uso de IA    [compartido]
+│   ├── challenges/          Los 14 desafíos con sus links oficiales (del template)
+│   ├── resources/           Reglas, entrega, jurado, free tiers (del template)
+│   ├── deploy/              Guía de deploy Vercel + Supabase
+│   └── SI_USAGE.md          Registro de uso de IA (lo pide el formulario)
+├── pipeline/                Python: listar, descargar y procesar NISAR y POWER           [Datos]
+│   └── notebooks/           Exploración en Jupyter
+├── data/raw/                Descargas crudas (.h5). IGNORADO por git                      [Datos, local]
+├── public/data/humedad/     Salida liviana del pipeline que consume la app (JSON)         [Datos]
+├── config/umbrales.json     Umbrales de la recomendación (SUPUESTOS)                      [Backend]
+├── src/lib/                 Lógica: motor de recomendación, clientes de Supabase          [Backend]
+├── src/app/api/             Endpoints: /api/recomendacion, /api/health…                   [Backend]
+├── supabase/migrations/     Tablas SQL, si se usa Supabase                                [Backend]
+├── src/types/contratos.ts   Tipos TypeScript de los contratos                             [compartido]
+├── src/app/                 Páginas, layout, manifest PWA                                 [Frontend]
+├── src/components/          Componentes React (mapa, gráfico, tarjeta)                    [Frontend]
+├── public/ (resto)          Íconos, service worker                                        [Frontend]
+└── .claude/skills/          Skills del template (NASA, geo, mapas, deploy, pitch…)
+```
 
-1. **Dónde están los cultivos:** una máscara de cultivo/agricultura sobre Itapúa. Candidatos (S, verificar disponibilidad y licencia): MapBiomas Paraguay, ESA WorldCover (clase "cropland", sin tipo de cultivo) y estadísticas del MAG/INE para saber cuáles son los cultivos principales de cada distrito.
-2. **Cómo está el suelo:** NISAR SME2 (200 m) promediado **solo sobre píxeles agrícolas**, **por distrito** de Itapúa y por fecha.
-3. **Qué hace el cultivo:** GCOV HV (retrodispersión) en pocas fechas o en pocos distritos. El HV sube cuando crece la cobertura vegetal y permite ver si la soja ya emergió (hipótesis física, S).
-4. **Qué conviene hacer:** reglas por **cultivo + etapa del calendario + humedad + pronóstico de lluvia** → sembrar / esperar / precaución, con una explicación del porqué.
+## 2. Quién hace qué
+### Datos (backend 2) — dueño de `pipeline/`, `public/data/humedad/`
+1. Crear la cuenta Earthdata y `~/.netrc`.
+2. Bajar **2–3 archivos SME2** (~350 MB) → explorar el `.h5` (variables, banderas de calidad, grilla) → documentarlo en `pipeline/notebooks/`.
+3. Definir las áreas con el equipo (¿zonas o distritos?) y la máscara agrícola o de cultivo.
+4. Implementar `03_procesar_nisar.py`: recorte → máscara → promedio por área y fecha → JSON según `contracts/humedad.schema.json`.
+5. Recién ahí bajar el resto de SME2 (10,7 GB en total) y, si hay tiempo, unas pocas escenas GCOV.
 
-**App móvil = PWA** (web responsive instalable desde el navegador del celular). Con ~30 h restantes, una app nativa no da (S). Se despliega en Vercel igual que ahora.
+### Backend — dueño de `src/lib/`, `src/app/api/`, `config/`, `supabase/`
+1. Calendario agrícola por cultivo **con fuente** (MAG/CAPECO) → `config/`.
+2. Reglas por cultivo + etapa + humedad + pronóstico (Open-Meteo/POWER) en `src/lib/recomendacion.ts`, con tests.
+3. Mantener `/api/recomendacion` según `contracts/recomendacion.schema.json`.
+4. Decidir si se usa Supabase (por ejemplo, para guardar las series). Si no hace falta, archivos estáticos.
+5. Deploy en Vercel desde el primer momento (`docs/deploy/vercel-supabase.md`).
 
-## 2. Roles y carpetas (cada uno escribe SOLO en las suyas)
-| Rol | Dueño de | Entrega |
-|---|---|---|
-| **Datos** (backend 2) | `pipeline/`, `data/processed/humedad/` | JSON de humedad por distrito y fecha, según el contrato |
-| **Backend** | `backend/`, `config/`, `data/processed/recomendaciones/` | Calendario por cultivo, umbrales, POWER/Open-Meteo, motor de reglas → JSON de recomendaciones |
-| **Frontend** | `app/` | PWA: mapa de distritos, selector de cultivo, gráfico, tarjeta de recomendación, aviso de datos provisionales |
-| **Compartido** | `contracts/`, `docs/`, `README.md` | Solo se cambian por PR **aprobado por los 3** |
+### Frontend — dueño de `src/app/` (menos `api/`), `src/components/`, `public/` (menos `data/`)
+1. Pensar primero en el celular: mapa de áreas (Leaflet), selector de cultivo, gráfico de la serie, tarjeta de recomendación.
+2. Aviso visible de datos provisionales (ya está en la página provisional).
+3. PWA: íconos de 192 y 512 px, service worker, prueba de "Instalar app".
+4. UI en inglés + español (toggle).
+5. Mañana: capturas y video de la demo.
 
-**Contrato primero:** en la primera hora se acuerdan los esquemas en `contracts/` (humedad, recomendación, distritos). A partir de ahí cada uno trabaja con **datos de ejemplo que respetan el contrato**, sin esperar a los demás.
+## 3. Cómo no pisarse
+- **Contrato primero:** en la primera reunión se confirma `contracts/` (está como PROPUESTA v0). Mientras tanto, cada uno usa los datos de ejemplo de `public/data/humedad/`.
+- **Una rama por tarea**, PRs chicos y frecuentes (cada 1–2 h), squash merge. Nunca push a `main`.
+- Cada uno toca solo sus carpetas. Lo compartido, solo por PR aprobado por los 3.
+- `git pull --rebase origin main` seguido.
+- **Claude Code:** al abrir la sesión, decile tu rol. `CLAUDE.md` le dice qué puede tocar. Opcional: reglas `deny` en tu `.claude/settings.local.json` (no se sube); verificalas con `/permissions`.
 
-## 3. Reglas de Git
-- `main` protegida: nadie hace push directo; todo entra por **Pull Request** con squash merge.
-- Ramas con prefijo de rol: `datos/descarga-sme2`, `back/reglas-soja`, `front/mapa-distritos`. Ramas cortas (de horas, no días).
-- Antes de empezar y antes de abrir el PR: `git pull --rebase origin main`.
-- Commits pequeños; nunca `git push --force` sobre ramas ajenas; nunca `git add -A` sin mirar antes `git status`.
-- **Archivos generados**: solo los escribe el script de su dueño. Si te hace falta otro dato, se pide; no se edita a mano.
-- Datos pesados (`.h5`) **nunca** van a Git (`data/raw/` está en `.gitignore`).
-- Cada uno configura su propia identidad: `git config user.name` / `user.email`.
+## 4. Configuración inicial de GitHub (hacelo vos, como dueño del repo)
+1. Settings → Branches → regla para `main`: *Require a pull request before merging* (1 aprobación) y *Block force pushes*.
+2. Settings → Collaborators: invitar a los otros 2.
+3. Cada integrante:
+   ```bash
+   git clone git@github.com:grupo-nova-devs/AgroSAR.git && cd AgroSAR
+   git config user.name "Nombre" && git config user.email "tu@mail"
+   npx pnpm@11.20.0 install && cp .env.example .env.local
+   git switch -c front/mapa     # o back/…, datos/…
+   ```
 
-## 4. Claude Code sin pisarse
-- `CLAUDE.md` (en la raíz) le dice a Claude qué carpetas son de cada rol. **Al empezar la sesión, decile tu rol**: "Soy Datos, solo podés tocar pipeline/ y data/processed/humedad/".
-- Opcional (más seguro): en tu `.claude/settings.local.json` personal (no se commitea) agregá reglas `deny` de Edit/Write sobre las carpetas ajenas. Verificalo con `/permissions`.
-- Cada uno en su propia rama: Claude nunca trabaja directo sobre `main`.
-
-## 5. Datos NISAR para todo Itapúa (listado real del 2026-11-14, jun→nov)
-| Producto | Archivos | Fechas | Total | Plan |
-|---|---|---|---|---|
-| SME2 | 105 (mediana 117 MB) | 53, del 18-jun al 21-oct | **10,7 GB** | Bajar todo (o empezar por las 5 fechas más recientes, ~0,6 GB) |
-| GCOV | 127 (mediana 1,9 GB) | 63, hasta el 5-nov | **316 GB** | **NO bajar todo**: 2–4 escenas de un mismo track, o lectura parcial remota |
-Se cubre con 11 combinaciones track/frame (asc. y desc.). Solo 4 archivos SME2 son de 5+5 MHz (SHSH, 400 m): decidir si se excluyen.
-
-## 6. Orden sugerido (hoy → mañana)
-1. **(Todos, 1 h)** Crear el repo, push inicial, acordar `contracts/` y lista de distritos.
-2. **Datos:** credenciales Earthdata → bajar 2–3 SME2 → explorar la estructura del `.h5` → recortar Itapúa → promedio por distrito → JSON → recién ahí bajar el resto.
-3. **Backend:** calendario por cultivo con fuente (MAG/CAPECO), umbrales, contexto de POWER y pronóstico de Open-Meteo, motor de reglas con tests.
-4. **Frontend:** PWA (manifest + service worker), mapa por distritos, selector de cultivo, vistas para móvil.
-5. **Mañana mediodía:** congelar funciones e integrar. **Tarde:** video de 30 s con subtítulos en inglés y formulario en inglés.
+## 5. Cronograma
+| Cuándo | Qué |
+|---|---|
+| Sáb, primera hora | Confirmar el contrato, las áreas (zonas o distritos) y los cultivos; protección de rama; primer deploy |
+| Sáb, tarde/noche | Cada rol en lo suyo, con datos de ejemplo; Datos explora SME2 |
+| Dom, mediodía | **Congelar funciones**: datos reales en `public/data/humedad/`, integrar |
+| Dom, tarde | Pruebas en celular, README final en inglés, video de 30 s, formulario, `SI_USAGE.md` |
+| Dom, antes de las 23:59 | **Submit for Judging** |

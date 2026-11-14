@@ -1,5 +1,5 @@
 """Lista (NO descarga) productos NISAR SME2 y GCOV por zona.
-No requiere credenciales. Uso:  python scripts/01_listar_nisar.py [--desde 2026-05-14] [--hasta 2026-11-14]
+No requiere credenciales. Uso:  python pipeline/01_listar_nisar.py [--desde 2026-05-14] [--hasta 2026-11-14]
 Escribe data/raw/nisar_listado.json (ignorado por git)."""
 import argparse, json, pathlib, statistics
 import asf_search as asf

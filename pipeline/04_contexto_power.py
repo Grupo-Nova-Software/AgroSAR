@@ -1,6 +1,6 @@
 """Descarga contexto climático de NASA POWER (sin login) para el centro de cada zona.
 Variables: PRECTOTCORR (lluvia mm/día), T2M (°C), GWETTOP (humedad superficial relativa 0-1, NO m3/m3).
-Uso: python scripts/04_contexto_power.py --desde 20260601 --hasta 20261110
+Uso: python pipeline/04_contexto_power.py --desde 20260601 --hasta 20261110
 Escribe data/raw/power_<zona>.json"""
 import argparse, json, pathlib, urllib.parse, urllib.request
 from zonas import ZONAS
