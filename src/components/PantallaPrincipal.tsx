@@ -50,8 +50,8 @@ export default function PantallaPrincipal() {
       style={fondos}
     >
       <section className="text-center">
-        <h1 className="font-display text-4xl font-semibold tracking-tight text-texto md:text-5xl">{t("titulo")}</h1>
-        <p className="mt-2 text-sm text-texto-suave md:text-base">{t("subtitulo")}</p>
+        <h1 className="font-display text-4xl font-bold tracking-tight text-texto md:text-6xl">{t("titulo")}</h1>
+        <p className="mt-2 text-lg text-texto-suave">{t("subtitulo")}</p>
       </section>
 
       <ul
@@ -82,15 +82,15 @@ export default function PantallaPrincipal() {
                 className="-z-10 object-cover transition-transform duration-700 group-hover:scale-105"
               />
               {/* Degradado para legibilidad del texto sobre la foto */}
-              <div className="absolute inset-0 -z-10 bg-gradient-to-b from-black/50 via-black/5 to-black/40" />
+              <div className="absolute inset-0 -z-10 bg-gradient-to-b from-black/60 via-black/5 to-black/45" />
 
               <div className="mt-3">
-                <h2 className="font-display text-3xl font-semibold tracking-tight drop-shadow-md">{tr(c.nombre)}</h2>
-                {c.descripcion && <p className="mx-auto mt-1 max-w-[22ch] text-sm font-medium text-white/90 drop-shadow">{tr(c.descripcion)}</p>}
+                <h2 className="font-display text-4xl font-bold tracking-tight drop-shadow-md">{tr(c.nombre)}</h2>
+                <p className="mx-auto mt-1 max-w-[24ch] text-base font-bold text-white drop-shadow-md">{tr(c.descripcion)}</p>
               </div>
 
-              <span className="mb-3 rounded-full bg-white/90 px-5 py-2 text-sm font-semibold text-[#1f5936] shadow transition-colors group-hover:bg-white">
-                {t("conocer")} →
+              <span className="mb-3 rounded-full bg-white px-6 py-3 text-lg font-bold text-[#1f5936] shadow-lg">
+                {t("conocer")}
               </span>
             </Link>
           </li>
@@ -110,6 +110,7 @@ export default function PantallaPrincipal() {
           />
         ))}
       </div>
+      <p className="mt-auto pt-10 text-center text-sm text-texto-suave">{t("pie")}</p>
     </Marco>
   );
 }

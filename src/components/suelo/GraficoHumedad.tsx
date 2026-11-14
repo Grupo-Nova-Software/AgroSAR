@@ -1,24 +1,18 @@
 "use client";
-// Gráfico de la serie de humedad (SVG propio, sin librerías). Bandas de fondo = umbrales SUPUESTOS
-// de config/umbrales.json (lectura; los mantiene Backend). Punto hueco = calidad dudosa.
+// Gráfico simple del agua en el suelo (SVG propio). Pensado para leerse sin saber de datos:
+// tres franjas con nombre (Mojado / Bueno / Seco) según los límites del cultivo, valores en %,
+// pocas fechas en el eje (las que entran sin encimarse) y el último valor destacado.
 import { useEffect, useRef, useState } from "react";
-import umbrales from "../../../config/umbrales.json";
-import type { EstadoRecomendacion, PuntoSerie } from "@/types/contratos";
+import type { PuntoSerie } from "@/types/contratos";
 import { useIdioma } from "../idioma";
+import type { UmbralesHumedad } from "./api";
 
-const M = { izq: 40, der: 10, arr: 12, aba: 28 };
+const M = { izq: 74, der: 46, arr: 14, aba: 30 }; // izq: columna con el nombre de cada franja
 const Y_MAX = 0.5;
-const COLOR: Record<EstadoRecomendacion, string> = {
-  sembrar: "var(--primario)",
-  esperar: "var(--dorado)",
-  precaucion: "var(--peligro)",
-};
+const ANCHO_ETIQUETA = 64; // px mínimos entre fechas del eje
 
-type Regla = { estado: EstadoRecomendacion; min?: number; max?: number };
-
-export default function GraficoHumedad({ serie }: { serie: PuntoSerie[] }) {
-  const { t, idioma } = useIdioma();
-  // El SVG usa el ancho real en píxeles para que el texto no se achique en el celular.
+export default function GraficoHumedad({ serie, umbrales }: { serie: PuntoSerie[]; umbrales: UmbralesHumedad }) {
+  const { t, fecha } = useIdioma();
   const caja = useRef<HTMLDivElement>(null);
   const [W, setW] = useState(640);
   useEffect(() => {
@@ -28,82 +22,74 @@ export default function GraficoHumedad({ serie }: { serie: PuntoSerie[] }) {
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
-  const H = W < 500 ? 220 : 260;
+  const H = W < 500 ? 240 : 280;
 
   const puntos = serie.filter((p) => typeof p.humedad_m3m3 === "number");
-  if (puntos.length < 2) return <p className="text-sm text-texto-suave">{t("sinDatos")}</p>;
+  if (puntos.length < 2) return <p ref={caja as never} className="text-base text-texto-suave">{t("sinDatos")}</p>;
 
   const t0 = new Date(puntos[0].fecha).getTime();
   const t1 = new Date(puntos.at(-1)!.fecha).getTime();
-  const x = (f: string) => M.izq + ((new Date(f).getTime() - t0) / Math.max(1, t1 - t0)) * (W - M.izq - M.der);
+  const anchoUtil = W - M.izq - M.der;
+  const x = (f: string) => M.izq + ((new Date(f).getTime() - t0) / Math.max(1, t1 - t0)) * anchoUtil;
   const y = (v: number) => M.arr + (1 - Math.min(v, Y_MAX) / Y_MAX) * (H - M.arr - M.aba);
   const linea = puntos.map((p, i) => `${i ? "L" : "M"}${x(p.fecha).toFixed(1)},${y(p.humedad_m3m3!).toFixed(1)}`).join(" ");
-  const fmt = (f: string) => new Date(f + "T12:00:00").toLocaleDateString(idioma === "es" ? "es-PY" : "en-US", { day: "numeric", month: "short" });
-  const etiquetasX = [puntos[0], puntos[Math.floor(puntos.length / 2)], puntos.at(-1)!];
+
+  // Fechas del eje: siempre la última; hacia atrás, solo las que quedan a más de ANCHO_ETIQUETA px de la anterior elegida.
+  const elegidas: PuntoSerie[] = [];
+  for (let i = puntos.length - 1; i >= 0; i--) {
+    const ultimaX = elegidas.length ? x(elegidas[elegidas.length - 1].fecha) : Infinity;
+    if (ultimaX - x(puntos[i].fecha) >= ANCHO_ETIQUETA) elegidas.push(puntos[i]);
+  }
+
+  const franjas = [
+    { desde: umbrales.optimo_max, hasta: Y_MAX, color: "var(--agua-mojado)", nombre: t("mojado") },
+    { desde: umbrales.bajo_max, hasta: umbrales.optimo_max, color: "var(--agua-bueno)", nombre: t("bueno") },
+    { desde: 0, hasta: umbrales.bajo_max, color: "var(--agua-seco)", nombre: t("seco") },
+  ];
+  const ultimo = puntos.at(-1)!;
 
   return (
-    <figure ref={caja}>
-      <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H} className="block h-auto w-full" role="img" aria-label={t("serieTitulo")}>
-        {/* Bandas de umbrales */}
-        {(umbrales.reglas as Regla[]).map((r, i) => {
-          const desde = r.min ?? 0;
-          const hasta = Math.min(r.max ?? Y_MAX, Y_MAX);
-          return (
-            <rect
-              key={i}
-              x={M.izq}
-              width={W - M.izq - M.der}
-              y={y(hasta)}
-              height={y(desde) - y(hasta)}
-              fill={COLOR[r.estado]}
-              opacity={0.1}
-            />
-          );
-        })}
-        {/* Eje Y */}
-        {[0, 0.1, 0.2, 0.3, 0.4, 0.5].map((v) => (
-          <g key={v}>
-            <line x1={M.izq} x2={W - M.der} y1={y(v)} y2={y(v)} stroke="var(--borde)" strokeWidth={1} />
-            <text x={M.izq - 8} y={y(v) + 4} textAnchor="end" fontSize={11} fill="var(--texto-suave)">
-              {v.toFixed(1)}
+    <div ref={caja}>
+      <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H} className="block h-auto w-full" role="img" aria-label={t("graficoTitulo")}>
+        {franjas.map((f) => (
+          <g key={f.nombre}>
+            <rect x={M.izq} width={anchoUtil} y={y(f.hasta)} height={y(f.desde) - y(f.hasta)} fill={f.color} opacity={0.18} />
+            <text x={M.izq - 8} y={(y(f.hasta) + y(f.desde)) / 2 + 5} textAnchor="end" fontSize={14} fontWeight={700} fill={f.color}>
+              {f.nombre}
             </text>
           </g>
         ))}
-        {/* Eje X */}
-        {etiquetasX.map((p, i) => (
-          <text key={i} x={x(p.fecha)} y={H - 8} textAnchor={i === 0 ? "start" : i === 2 ? "end" : "middle"} fontSize={11} fill="var(--texto-suave)">
-            {fmt(p.fecha)}
+        {/* Eje derecho en % */}
+        {[0.1, 0.2, 0.3, 0.4].map((v) => (
+          <text key={v} x={W - M.der + 8} y={y(v) + 5} fontSize={13} fill="var(--texto-suave)">
+            {Math.round(v * 100)} %
           </text>
         ))}
-        {/* Serie */}
-        <path d={linea} fill="none" stroke="var(--acento)" strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" />
+        {/* Fechas */}
+        {elegidas.map((p) => (
+          <text key={p.fecha} x={x(p.fecha)} y={H - 8} textAnchor={p === ultimo ? "end" : "middle"} fontSize={13} fontWeight={p === ultimo ? 700 : 400} fill="var(--texto-suave)">
+            {fecha(p.fecha)}
+          </text>
+        ))}
+        <path d={linea} fill="none" stroke="var(--texto)" strokeWidth={3} strokeLinejoin="round" strokeLinecap="round" />
         {puntos.map((p) => (
           <circle
             key={p.fecha}
             cx={x(p.fecha)}
             cy={y(p.humedad_m3m3!)}
-            r={p.calidad === "buena" ? 3.5 : 4.5}
-            fill={p.calidad === "buena" ? "var(--acento)" : "var(--fondo)"}
-            stroke="var(--acento)"
-            strokeWidth={2}
+            r={p === ultimo ? 7 : 4.5}
+            fill={p.calidad === "buena" ? "var(--texto)" : "var(--tarjeta)"}
+            stroke="var(--texto)"
+            strokeWidth={2.5}
           >
-            <title>{`${fmt(p.fecha)}: ${p.humedad_m3m3!.toFixed(3)} m³/m³${p.calidad !== "buena" ? ` (${t("calidadDudosa")})` : ""}`}</title>
+            <title>{`${fecha(p.fecha, true)}: ${Math.round(p.humedad_m3m3! * 100)} %`}</title>
           </circle>
         ))}
+        {/* Último valor destacado */}
+        <text x={x(ultimo.fecha) - 12} y={y(ultimo.humedad_m3m3!) - 12} textAnchor="end" fontSize={17} fontWeight={800} fill="var(--texto)">
+          {Math.round(ultimo.humedad_m3m3! * 100)} %
+        </text>
       </svg>
-      <figcaption className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-texto-suave">
-        <span>m³/m³</span>
-        {(["sembrar", "esperar", "precaucion"] as const).map((e) => (
-          <span key={e} className="inline-flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-sm" style={{ background: COLOR[e], opacity: 0.6 }} />
-            {t(`estado_${e}`)}
-          </span>
-        ))}
-        <span className="inline-flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-full border-2 border-acento" />
-          {t("calidadDudosa")}
-        </span>
-      </figcaption>
-    </figure>
+    </div>
   );
 }

@@ -1,12 +1,12 @@
 import type { Metadata, Viewport } from "next";
-import { Fraunces, Plus_Jakarta_Sans } from "next/font/google";
+import { Atkinson_Hyperlegible, Bricolage_Grotesque } from "next/font/google";
 import { IdiomaProvider } from "@/components/idioma";
 import { SCRIPT_TEMA, TemaProvider } from "@/components/tema";
 import "./globals.css";
 
-// Fraunces: logo y títulos (serif con carácter). Plus Jakarta Sans: texto (legible, moderna).
-const fraunces = Fraunces({ variable: "--font-fraunces", subsets: ["latin"], weight: ["500", "600", "700"] });
-const jakarta = Plus_Jakarta_Sans({ variable: "--font-jakarta", subsets: ["latin"], weight: ["400", "500", "600", "700"] });
+// Bricolage Grotesque: logo y títulos (con carácter). Atkinson Hyperlegible: texto, diseñada para leerse fácil.
+const titulo = Bricolage_Grotesque({ variable: "--font-titulo", subsets: ["latin"] });
+const texto = Atkinson_Hyperlegible({ variable: "--font-texto", subsets: ["latin"], weight: ["400", "700"] });
 
 export const metadata: Metadata = {
   title: "AgroSAR Itapúa",
@@ -23,7 +23,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="es" suppressHydrationWarning className={`${fraunces.variable} ${jakarta.variable} h-full antialiased`}>
+    <html lang="es" suppressHydrationWarning className={`${titulo.variable} ${texto.variable} h-full antialiased`}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: SCRIPT_TEMA }} />
       </head>
