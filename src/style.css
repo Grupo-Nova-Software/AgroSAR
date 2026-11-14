@@ -1,0 +1,30 @@
+:root {
+  --bg: #f6f7f4; --card: #fff; --text: #1d2a1f; --muted: #5b6b5e; --border: #dfe4dc;
+  --sembrar: #2e7d32; --esperar: #b7791f; --precaucion: #c62828; --aviso: #fff4ce;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); }
+.aviso { background: var(--aviso); border-bottom: 2px solid #e0b100; padding: 10px 16px; font-size: 15px; position: sticky; top: 0; z-index: 1000; }
+header { padding: 16px; }
+header h1 { margin: 0 0 4px; font-size: 24px; }
+header p { margin: 0; color: var(--muted); }
+main { padding: 0 16px 16px; max-width: 1200px; margin: 0 auto; }
+.controles { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 12px; }
+.controles label { display: flex; flex-direction: column; font-size: 13px; color: var(--muted); gap: 4px; flex: 1 1 160px; }
+select, input { font-size: 16px; padding: 8px; border: 1px solid var(--border); border-radius: 8px; background: #fff; }
+.grid { display: grid; grid-template-columns: 2fr 1fr; gap: 12px; }
+.tarjeta { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px; min-width: 0; }
+.tarjeta h2 { margin: 0 0 8px; font-size: 16px; }
+#mapa { height: 340px; padding: 0; overflow: hidden; }
+.grafico { grid-column: 1 / -1; }
+.grafico canvas { width: 100% !important; max-height: 340px; }
+.estado { font-size: 22px; font-weight: 700; padding: 14px; border-radius: 10px; text-align: center; color: #fff; background: #888; }
+.estado.sembrar { background: var(--sembrar); }
+.estado.esperar { background: var(--esperar); }
+.estado.precaucion { background: var(--precaucion); }
+.nota { font-size: 12px; color: var(--muted); }
+footer { text-align: center; font-size: 12px; color: var(--muted); padding: 16px; }
+@media (max-width: 760px) {
+  .grid { grid-template-columns: 1fr; }
+  #mapa { height: 260px; }
+}
