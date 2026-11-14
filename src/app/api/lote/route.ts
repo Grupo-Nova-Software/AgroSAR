@@ -12,6 +12,7 @@ import { celdasGeoJSON } from "@/lib/mapa/celdas";
 import { celdasDelLote, LOTE_MAX_HA, resumirSectores } from "@/lib/mapa/sectores";
 import { serieDeCeldas } from "@/lib/mapa/series";
 import { cargarGrillas } from "@/lib/mapa/grilla-nisar";
+import { bboxDePoligonos } from "@/lib/mapa/geo";
 import { distritoDePunto, distritoMasCercano } from "@/lib/mapa/zonas";
 
 export async function POST(request: Request) {
@@ -42,7 +43,7 @@ export async function POST(request: Request) {
     const fecha = fechaReferencia(null, entrada.fecha);
 
     // 1) Celdas SAR del lote y serie temporal propia (NISAR real si el rol Datos publicó la grilla).
-    await cargarGrillas(new URL(request.url).origin);
+    await cargarGrillas(new URL(request.url).origin, bboxDePoligonos(polys));
     const { celdas, res_m, bbox } = celdasDelLote(polys, ha, fecha, cfg);
     const centro = centroide(polys);
     const distrito = distritoDePunto(centro);

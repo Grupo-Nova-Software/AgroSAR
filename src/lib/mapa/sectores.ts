@@ -11,7 +11,9 @@ export const LOTE_MAX_HA = 10_000;
 export function celdasDelLote(polys: Poligono[], hectareas: number, fecha: string, cfg: CultivoConfig) {
   const bbox = bboxDePoligonos(polys);
   const resM = hectareas > 2500 ? RES_BASE_M * 4 : hectareas > 600 ? RES_BASE_M * 2 : RES_BASE_M;
-  const r = generarCeldas(bbox, { fecha, cfg, resM, soloDentroDe: polys, maxCeldas: 5000 });
+  // El lote es la chacra del agricultor: se analiza en cualquier lugar y se asume cultivable
+  // (no hay capa real de cobertura; la humedad sí es NISAR real donde hay grilla publicada).
+  const r = generarCeldas(bbox, { fecha, cfg, resM, soloDentroDe: polys, maxCeldas: 5000, libre: true, coberturaFija: "cultivo" });
   const res_m = r.res_m;
   let celdas = r.celdas;
 
@@ -20,7 +22,7 @@ export function celdasDelLote(polys: Poligono[], hectareas: number, fecha: strin
     const c = centroide(polys);
     const d = distritoDePunto(c) ?? distritoMasCercano(c).distrito;
     const { i, j } = indiceDe(c, res_m);
-    celdas = [construirCelda(i, j, res_m, fecha, cfg, d)];
+    celdas = [construirCelda(i, j, res_m, fecha, cfg, d, "cultivo")];
   }
   return { celdas, res_m, bbox };
 }

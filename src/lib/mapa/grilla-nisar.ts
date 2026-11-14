@@ -2,7 +2,6 @@
 // (contrato contracts/humedad_grilla.schema.json). Se carga una vez por instancia y se consulta en forma síncrona
 // desde la grilla de celdas del mapa y del lote. Si no hay grilla para un punto, quien llama usa el valor ficticio
 // y lo marca como tal (fuente_humedad = "ficticia").
-import { DISTRITOS } from "./zonas";
 
 export const FUENTE_NISAR = "NISAR L3 SME2 (provisional) · NASA-ISRO · ASF DAAC";
 
@@ -14,26 +13,54 @@ export interface GrillaNisar {
   humedad: Record<string, (number | null)[][]>;
 }
 
-const cache = new Map<string, GrillaNisar>();
-let cargando: Promise<void> | null = null;
+type BBox4 = [number, number, number, number];
+interface EntradaIndice { id: string; archivo: string; bbox: BBox4 }
 
-/** Carga (una sola vez) las grillas de los distritos de trabajo. Los errores dejan la grilla ausente. */
-export function cargarGrillas(origen: string): Promise<void> {
-  if (cache.size === DISTRITOS.length) return Promise.resolve();
-  cargando ??= Promise.all(
-    DISTRITOS.map(async (d) => {
-      try {
-        const r = await fetch(new URL(`/data/grilla/${d.id}.json`, origen));
-        if (r.ok) cache.set(d.id, await r.json());
-      } catch {
-        /* sin grilla real para este distrito */
-      }
-    }),
-  ).then(() => {
-    cargando = null;
-  });
-  return cargando;
+const cache = new Map<string, GrillaNisar>();
+const pendientes = new Map<string, Promise<void>>();
+let indice: Promise<EntradaIndice[]> | null = null;
+
+function cargarIndice(origen: string): Promise<EntradaIndice[]> {
+  indice ??= fetch(new URL("/data/grilla/index.json", origen))
+    .then((r) => (r.ok ? r.json() : { areas: [] }))
+    .then((d) => (d.areas ?? []) as EntradaIndice[])
+    .catch(() => {
+      indice = null; // reintentar en el próximo pedido
+      return [];
+    });
+  return indice;
 }
+
+/**
+ * Carga (una vez por instancia) las grillas NISAR publicadas que tocan `bbox` ([lon_min, lat_min, lon_max, lat_max]).
+ * Sirve para cualquier área de public/data/grilla/index.json, no solo los distritos de trabajo.
+ * Los errores dejan la grilla ausente (quien consulta cae al valor ficticio y lo marca).
+ */
+export async function cargarGrillas(origen: string, bbox?: BBox4): Promise<void> {
+  const areas = await cargarIndice(origen);
+  const necesarias = areas.filter(
+    (a) => !bbox || (a.bbox[0] <= bbox[2] && a.bbox[2] >= bbox[0] && a.bbox[1] <= bbox[3] && a.bbox[3] >= bbox[1]),
+  );
+  await Promise.all(
+    necesarias.map((a) => {
+      if (cache.has(a.id)) return Promise.resolve();
+      let p = pendientes.get(a.id);
+      if (!p) {
+        p = fetch(new URL(`/data/grilla/${a.archivo}`, origen))
+          .then(async (r) => {
+            if (r.ok) cache.set(a.id, await r.json());
+          })
+          .catch(() => {})
+          .finally(() => pendientes.delete(a.id));
+        pendientes.set(a.id, p);
+      }
+      return p;
+    }),
+  );
+}
+
+/** true si hay grilla NISAR real cargada que cubre el punto. */
+export const hayGrillaEn = (p: [number, number]) => grillaDe(p) !== null;
 
 /** Solo para tests: cargar una grilla a mano o vaciar la caché. */
 export function _registrarGrilla(g: GrillaNisar | null) {

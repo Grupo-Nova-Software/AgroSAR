@@ -21,15 +21,15 @@ export function serieDeCeldas(id: string, zona: string, bbox: BBox, celdas: Celd
   const base = utiles.length ? utiles : celdas;
 
   // REAL: si hay grilla NISAR publicada para estas celdas, la serie usa las fechas reales de paso del satélite.
-  const fechasReales = base.length ? fechasNisar(base[0].centro).filter((f) => f <= hasta) : [];
+  const fechasReales = celdas.length ? fechasNisar(celdas[0].centro).filter((f) => f <= hasta) : [];
   if (fechasReales.length) {
     const serieReal = fechasReales.map((fecha) => {
-      const vals = base.map((c) => humedadNisar(c.centro, fecha, true)?.valor).filter((v): v is number => typeof v === "number");
+      const vals = celdas.map((c) => humedadNisar(c.centro, fecha, true)?.valor).filter((v): v is number => typeof v === "number");
       if (!vals.length) return { fecha, humedad_m3m3: null, calidad: "sin_dato" as const };
       return {
         fecha,
         humedad_m3m3: Number((vals.reduce((s2, v) => s2 + v, 0) / vals.length).toFixed(3)),
-        calidad: vals.length >= Math.ceil(base.length / 2) ? ("buena" as const) : ("dudosa" as const),
+        calidad: vals.length >= Math.ceil(celdas.length / 2) ? ("buena" as const) : ("dudosa" as const),
         pixeles_validos: vals.length,
       };
     });

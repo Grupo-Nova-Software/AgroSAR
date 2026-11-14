@@ -125,6 +125,8 @@ export interface ResumenHumedad {
   tendencia: "subiendo" | "bajando" | "estable" | null;
   ventana_dias: number;
   fuente: string;
+  dias_desde_observacion: number | null; // antigüedad de la última pasada usada, respecto de la fecha del análisis
+  desactualizada: boolean; // true si esa pasada tiene más de DIAS_DATO_VIEJO días
 }
 
 export interface ClasifTemporada {
