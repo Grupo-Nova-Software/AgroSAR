@@ -1,4 +1,14 @@
+# Pipeline de datos (rol Datos). Instalar: pip install -r pipeline/requirements.txt
 asf_search>=14
 earthaccess
 h5py
 numpy
+pandas
+xarray
+rioxarray
+geopandas
+shapely
+requests
+python-dotenv
+supabase
+jupyterlab
