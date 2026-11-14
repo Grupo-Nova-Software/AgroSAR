@@ -70,14 +70,15 @@ function fechaObs(g: GrillaNisar, fecha: string): string {
 
 /**
  * Humedad real de la celda NISAR más cercana a `p`. Si esa celda no tiene dato, promedia sus vecinas (3×3).
+ * Devuelve null si NO hay grilla para el punto; { valor: null } si hay grilla pero NISAR no tiene dato válido ahí.
  * `exacta`: usar exactamente esa fecha de observación (para armar series); si no existe, null.
  */
-export function humedadNisar(p: [number, number], fecha: string, exacta = false): { valor: number; fecha_obs: string } | null {
+export function humedadNisar(p: [number, number], fecha: string, exacta = false): { valor: number | null; fecha_obs: string } | null {
   const g = grillaDe(p);
   if (!g || g.fechas.length === 0) return null;
   const f = exacta ? fecha : fechaObs(g, fecha);
   const m = g.humedad[f];
-  if (!m) return null;
+  if (!m) return exacta ? null : { valor: null, fecha_obs: f };
   const i = cercano(g.lat, p[1]);
   const j = cercano(g.lon, p[0]);
   const directo = m[i]?.[j];
@@ -87,7 +88,7 @@ export function humedadNisar(p: [number, number], fecha: string, exacta = false)
     const v = m[i + di]?.[j + dj];
     if (typeof v === "number") vecinos.push(v);
   }
-  if (!vecinos.length) return null;
+  if (!vecinos.length) return { valor: null, fecha_obs: f }; // NISAR pasó pero no hay dato válido (agua, borde, calidad)
   return { valor: Number((vecinos.reduce((s, v) => s + v, 0) / vecinos.length).toFixed(3)), fecha_obs: f };
 }
 

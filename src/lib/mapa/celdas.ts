@@ -29,7 +29,7 @@ export interface Celda {
   distrito: string;
   cobertura: Cobertura;
   pendiente_pct: number;
-  humedad_m3m3: number;
+  humedad_m3m3: number | null; // null = NISAR pasó pero no hay dato válido en esa celda
   humedad_estado: EstadoHumedad;
   fuente_humedad: "nisar" | "ficticia";
   fecha_obs?: string; // fecha de la pasada NISAR usada (si es real)
@@ -131,8 +131,9 @@ export function construirCelda(i: number, j: number, resM: number, fecha: string
   const cobertura = coberturaCelda(centro, d);
   const pendiente = pendienteCelda(centro);
   const real = cobertura === "agua" || cobertura === "urbano" ? null : humedadNisar(centro, fecha);
-  const humedad = real?.valor ?? humedadCelda(centro, cobertura, pendiente, fecha);
-  const estado = clasificarHumedad(humedad, cfg?.humedad ?? UMBRALES_DEFECTO);
+  // Con grilla real nunca se inventa: si NISAR no tiene dato válido, la celda queda "sin_datos".
+  const humedad = real ? real.valor : humedadCelda(centro, cobertura, pendiente, fecha);
+  const estado = humedad === null ? "sin_datos" : clasificarHumedad(humedad, cfg?.humedad ?? UMBRALES_DEFECTO);
   const { aptitud, motivos } = aptitudCelda(cfg, cobertura, estado, pendiente);
   return {
     id: `${resM}:${i}:${j}`,
