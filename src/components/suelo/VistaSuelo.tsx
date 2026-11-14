@@ -1,15 +1,18 @@
 "use client";
-// Pestaña "Suelo": cultivo + zona → mapa coloreado por recomendación, tarjeta de datos y gráfico.
-// Datos: /data/humedad/*.json (contrato humedad v0) y /api/recomendacion (contrato recomendacion v0).
+// Pestaña "Suelo": cultivo + zona → mapa coloreado por el motor del backend, tarjeta de análisis,
+// lote dibujado por el agricultor y gráfico de la serie NISAR.
+// Datos: /data/humedad/*.json (contrato humedad v0, rol Datos) + /api/ranking, /api/analisis, /api/lote (rol Backend).
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
-import type { EstadoRecomendacion, IndiceHumedad, Recomendacion, SerieHumedad } from "@/types/contratos";
+import { useEffect, useState } from "react";
+import type { EstadoRecomendacion, IndiceHumedad, SerieHumedad } from "@/types/contratos";
 import { CULTIVOS } from "../cultivos";
 import { useIdioma } from "../idioma";
 import Marco from "../Marco";
+import { analizarLote, pedirAnalisis, pedirEstados, type Analisis, type ResultadoLote } from "./api";
 import GraficoHumedad from "./GraficoHumedad";
-import MapaAreas, { TOKEN_ESTADO } from "./MapaAreas";
+import MapaAreas, { type PoligonoGeoJSON } from "./MapaAreas";
+import TarjetaAnalisis from "./TarjetaAnalisis";
 
 export default function VistaSuelo({ cultivo: cultivoParam, area: areaParam }: { cultivo?: string; area?: string }) {
   const { t, tr, idioma } = useIdioma();
@@ -17,7 +20,11 @@ export default function VistaSuelo({ cultivo: cultivoParam, area: areaParam }: {
 
   const cultivo = CULTIVOS.find((c) => c.id === cultivoParam)?.id ?? "soja";
   const [areas, setAreas] = useState<SerieHumedad[]>([]);
-  const [recos, setRecos] = useState<Record<string, Recomendacion>>({});
+  const [estados, setEstados] = useState<Record<string, EstadoRecomendacion>>({});
+  const [analisis, setAnalisis] = useState<Analisis | undefined>();
+  const [poligono, setPoligono] = useState<PoligonoGeoJSON | null>(null);
+  // Resultado del lote con la "clave" de la consulta que lo produjo; si no coincide con la actual, está cargando.
+  const [loteGuardado, setLoteGuardado] = useState<{ clave: string; datos: ResultadoLote } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const areaId = (areaParam && areas.some((a) => a.id === areaParam) ? areaParam : areas[0]?.id) ?? "";
 
@@ -26,7 +33,7 @@ export default function VistaSuelo({ cultivo: cultivoParam, area: areaParam }: {
     router.replace(`/suelo?${p.toString()}`, { scroll: false });
   };
 
-  // Cargar áreas una vez
+  // Áreas y series NISAR (una vez)
   useEffect(() => {
     (async () => {
       try {
@@ -38,34 +45,51 @@ export default function VistaSuelo({ cultivo: cultivoParam, area: areaParam }: {
     })();
   }, []);
 
-  // Recomendaciones de todas las áreas para el cultivo elegido (colorean el mapa)
+  // Estados de todas las áreas para colorear el mapa
   useEffect(() => {
     if (!areas.length) return;
     let vigente = true;
-    (async () => {
-      try {
-        const lista: Recomendacion[] = await Promise.all(
-          areas.map(async (a) => (await fetch(`/api/recomendacion?area=${a.id}&cultivo=${cultivo}`)).json()),
-        );
-        if (vigente) setRecos(Object.fromEntries(lista.map((r) => [r.area_id, r])));
-      } catch (e) {
-        if (vigente) setError((e as Error).message);
-      }
-    })();
+    pedirEstados(areas.map((a) => a.id), cultivo, idioma)
+      .then((e) => vigente && setEstados(e))
+      .catch((e) => vigente && setError((e as Error).message));
     return () => {
       vigente = false;
     };
-  }, [areas, cultivo]);
+  }, [areas, cultivo, idioma]);
 
-  const estados = useMemo(
-    () => Object.fromEntries(Object.entries(recos).map(([k, r]) => [k, r.estado])) as Record<string, EstadoRecomendacion>,
-    [recos],
-  );
+  // Análisis completo del área elegida
+  useEffect(() => {
+    if (!areaId) return;
+    let vigente = true;
+    pedirAnalisis(areaId, cultivo, idioma)
+      .then((a) => vigente && setAnalisis(a))
+      .catch((e) => vigente && setError((e as Error).message));
+    return () => {
+      vigente = false;
+      setAnalisis(undefined);
+    };
+  }, [areaId, cultivo, idioma]);
+
+  // Análisis del lote dibujado (se repite si cambia el cultivo o el idioma)
+  const claveLote = poligono ? `${JSON.stringify(poligono.coordinates)}|${cultivo}|${idioma}` : "";
+  useEffect(() => {
+    if (!poligono) return;
+    let vigente = true;
+    analizarLote(poligono, cultivo, idioma)
+      .then((r) => vigente && setLoteGuardado({ clave: claveLote, datos: r }))
+      .catch((e) => vigente && setError((e as Error).message));
+    return () => {
+      vigente = false;
+    };
+  }, [poligono, cultivo, idioma, claveLote]);
+  const lote = poligono && loteGuardado ? loteGuardado.datos : null;
+  const cargandoLote = Boolean(poligono) && loteGuardado?.clave !== claveLote;
+
+  const alTerminarLote = (p: PoligonoGeoJSON | null) => setPoligono(p);
+
   const area = areas.find((a) => a.id === areaId);
-  const reco = recos[areaId];
   const ultimo = area?.serie.filter((p) => typeof p.humedad_m3m3 === "number").at(-1);
-  const fmt = (f: string) =>
-    new Date(f + "T12:00:00").toLocaleDateString(idioma === "es" ? "es-PY" : "en-US", { day: "numeric", month: "long", year: "numeric" });
+  const fechaCapas = ultimo?.fecha ?? "2026-10-17";
 
   return (
     <Marco>
@@ -75,7 +99,7 @@ export default function VistaSuelo({ cultivo: cultivoParam, area: areaParam }: {
       </section>
 
       {/* Selector de cultivo */}
-      <div role="radiogroup" aria-label={t("cultivo")} className="mt-5 flex justify-center gap-2 md:justify-start">
+      <div role="radiogroup" aria-label={t("cultivo")} className="mt-5 flex flex-wrap justify-center gap-2 md:justify-start">
         {CULTIVOS.map((c) => {
           const sel = c.id === cultivo;
           return (
@@ -100,9 +124,16 @@ export default function VistaSuelo({ cultivo: cultivoParam, area: areaParam }: {
       <div className="mt-6 grid gap-5 md:grid-cols-5">
         <div className="md:col-span-3">
           {areas.length ? (
-            <MapaAreas areas={areas} estados={estados} seleccionada={areaId} alSeleccionar={(id) => actualizarUrl({ area: id })} />
+            <MapaAreas
+              areas={areas}
+              estados={estados}
+              seleccionada={areaId}
+              alSeleccionar={(id) => actualizarUrl({ area: id })}
+              fechaCapas={fechaCapas}
+              alTerminarLote={alTerminarLote}
+            />
           ) : (
-            <div className="grid h-72 place-items-center rounded-2xl border border-borde bg-tarjeta text-sm text-texto-suave md:h-[26rem]">
+            <div className="grid h-80 place-items-center rounded-2xl border border-borde bg-tarjeta text-sm text-texto-suave md:h-[28rem]">
               {t("cargando")}
             </div>
           )}
@@ -121,6 +152,28 @@ export default function VistaSuelo({ cultivo: cultivoParam, area: areaParam }: {
               ))}
             </select>
           </label>
+
+          {/* Resultado del lote dibujado */}
+          {(lote || cargandoLote) && (
+            <section className="mt-4 rounded-2xl border-2 border-primario/40 bg-tarjeta p-5">
+              <p className="text-xs font-semibold uppercase tracking-wider text-texto-suave">{t("tuLote")}</p>
+              {cargandoLote || !lote ? (
+                <p className="mt-2 text-sm text-texto-suave">{t("analizandoLote")}</p>
+              ) : (
+                <>
+                  <h2 className="font-display text-2xl font-semibold">
+                    {lote.lote.hectareas.toLocaleString(idioma === "es" ? "es-PY" : "en-US")} {t("hectareas")}
+                  </h2>
+                  {lote.lote.area_referencia && (
+                    <p className="text-xs text-texto-suave">
+                      {t("areaReferencia")}: {lote.lote.area_referencia.zona}
+                    </p>
+                  )}
+                  <TarjetaAnalisis analisis={lote.analisis} />
+                </>
+              )}
+            </section>
+          )}
         </div>
 
         {/* Tarjeta de la zona elegida */}
@@ -129,39 +182,23 @@ export default function VistaSuelo({ cultivo: cultivoParam, area: areaParam }: {
           <h2 className="font-display text-2xl font-semibold leading-tight">{area?.zona ?? "—"}</h2>
 
           <p className="mt-5 text-xs font-semibold uppercase tracking-wider text-texto-suave">{t("recomendacion")}</p>
-          {reco ? (
-            <div
-              className={`mt-2 rounded-xl p-4 ${reco.estado === "esperar" ? "text-[#2b2410]" : "text-white"}`}
-              style={{ background: `var(${TOKEN_ESTADO[reco.estado]})` }}
-            >
-              <p className="font-display text-2xl font-semibold">{t(`estado_${reco.estado}`)}</p>
-              <p className="mt-1 text-sm opacity-90">{reco.motivo}</p>
-            </div>
-          ) : (
-            <div className="mt-2 h-24 animate-pulse rounded-xl bg-tarjeta-2" />
-          )}
+          <TarjetaAnalisis analisis={analisis} />
 
-          <dl className="mt-5 grid grid-cols-2 gap-3">
-            <div className="rounded-xl bg-tarjeta-2 p-3">
-              <dt className="text-xs text-texto-suave">{t("humedadActual")}</dt>
-              <dd className="font-display text-xl font-semibold text-acento">
-                {ultimo ? `${ultimo.humedad_m3m3!.toFixed(2)}` : "—"} <span className="text-xs font-normal">m³/m³</span>
-              </dd>
-              {ultimo && <dd className="text-[11px] text-texto-suave">{fmt(ultimo.fecha)}</dd>}
-            </div>
+          <dl className="mt-3 grid grid-cols-2 gap-3">
             <div className="rounded-xl bg-tarjeta-2 p-3">
               <dt className="text-xs text-texto-suave">{t("retrodispersion")}</dt>
               <dd className="font-display text-xl font-semibold text-acento">
                 {typeof ultimo?.hv_db === "number" ? ultimo.hv_db.toFixed(1) : "—"} <span className="text-xs font-normal">dB</span>
               </dd>
-              <dd className="text-[11px] text-texto-suave">
-                {t("observaciones")}: {area?.serie.length ?? 0}
-              </dd>
+            </div>
+            <div className="rounded-xl bg-tarjeta-2 p-3">
+              <dt className="text-xs text-texto-suave">{t("observaciones")}</dt>
+              <dd className="font-display text-xl font-semibold text-acento">{area?.serie.length ?? 0}</dd>
             </div>
           </dl>
 
           <p className="mt-4 text-[11px] leading-relaxed text-texto-suave">
-            {t("fuente")}: <strong className={area?.es_ejemplo ? "text-dorado" : ""}>{area?.fuente ?? "—"}</strong>. {t("umbralesSupuestos")}
+            {t("fuente")}: <strong className={area?.es_ejemplo ? "text-dorado" : "text-acento"}>{area?.fuente ?? "—"}</strong>. {t("umbralesSupuestos")}
           </p>
         </aside>
       </div>
