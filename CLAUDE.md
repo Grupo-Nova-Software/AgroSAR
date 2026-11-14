@@ -32,8 +32,8 @@
 Los contratos de datos (`contracts/`) definen qué produce cada rol. Respetalos al escribir y al leer.
 
 ## Git
-- Nunca hagas commit ni push a `main`. Trabajá en una rama `datos/…`, `back/…` o `front/…` y abrí un PR.
-- `git pull --rebase origin main` antes de empezar y antes del PR. Nunca `push --force` sobre ramas ajenas.
+- Nunca hagas commit ni push a `main` (está protegida). Cada persona trabaja en **su rama**: `datos`, `backend` o `frontend`, y abre un PR hacia `main` cada 1–2 h.
+- `git fetch origin && git rebase origin/main` al empezar y después de cada PR mergeado. En **tu propia rama** está permitido `git push --force-with-lease` después de un rebase; en ramas ajenas o en `main`, nunca.
 - Antes de commitear, revisá `git status` y agregá solo los archivos del rol (no uses `git add -A` a ciegas).
 - Dependencias nuevas: `package.json` y `pnpm-lock.yaml` van juntos en un PR propio y chico. Si el lockfile tiene conflicto, quedate con el de `main` y corré `pnpm install`.
 - Antes de dar algo por terminado: `pnpm lint && pnpm build` (JS) o ejecutar el script (Python).

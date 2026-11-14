@@ -52,20 +52,30 @@ AgroSAR/
 
 ## 3. Cómo no pisarse
 - **Contrato primero:** en la primera reunión se confirma `contracts/` (está como PROPUESTA v0). Mientras tanto, cada uno usa los datos de ejemplo de `public/data/humedad/`.
-- **Una rama por tarea**, PRs chicos y frecuentes (cada 1–2 h), squash merge. Nunca push a `main`.
-- Cada uno toca solo sus carpetas. Lo compartido, solo por PR aprobado por los 3.
-- `git pull --rebase origin main` seguido.
+- **Una rama por persona:** `datos`, `backend`, `frontend`. Nadie escribe en la rama de otro.
+- **PR a `main` cada 1–2 h** (lo que esté andando), con *squash merge*. Si una rama vive mucho sin mergearse, los conflictos crecen.
+- Después de cada merge, todos actualizan su rama:
+  ```bash
+  git fetch origin && git rebase origin/main
+  git push --force-with-lease      # solo en TU rama
+  ```
+- Cada uno toca solo sus carpetas, así que el rebase casi nunca da conflicto. Lo compartido, solo por PR aprobado por los 3.
 - **Claude Code:** al abrir la sesión, decile tu rol. `CLAUDE.md` le dice qué puede tocar. Opcional: reglas `deny` en tu `.claude/settings.local.json` (no se sube); verificalas con `/permissions`.
 
 ## 4. Configuración inicial de GitHub (hacelo vos, como dueño del repo)
-1. Settings → Branches → regla para `main`: *Require a pull request before merging* (1 aprobación) y *Block force pushes*.
-2. Settings → Collaborators: invitar a los otros 2.
+1. Settings → **Rules → Rulesets → New branch ruleset** (o Settings → Branches → *Add classic branch protection rule*):
+   - Target: `main` · Enforcement: **Active**
+   - ✅ *Restrict deletions* · ✅ *Block force pushes*
+   - ✅ *Require a pull request before merging* → Required approvals: **1** (otra persona revisa; en un apuro, el admin puede saltearlo)
+   - Opcional: *Require linear history* (combina bien con squash merge)
+   - Settings → General → Pull Requests: dejar solo **Allow squash merging** y activar *Automatically delete head branches* **desactivado** (las ramas personales se reutilizan).
+2. Settings → Collaborators/Teams: dar rol **Write** a los otros 2.
 3. Cada integrante:
    ```bash
-   git clone git@github.com:grupo-nova-devs/AgroSAR.git && cd AgroSAR
+   git clone git@github.com:Grupo-Nova-Software/AgroSAR.git && cd AgroSAR
    git config user.name "Nombre" && git config user.email "tu@mail"
    npx pnpm@11.20.0 install && cp .env.example .env.local
-   git switch -c front/mapa     # o back/…, datos/…
+   git switch frontend          # o backend / datos (ya existen en el remoto)
    ```
 
 ## 5. Cronograma
