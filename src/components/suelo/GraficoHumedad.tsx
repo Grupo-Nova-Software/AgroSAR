@@ -1,13 +1,12 @@
 "use client";
 // Gráfico de la serie de humedad (SVG propio, sin librerías). Bandas de fondo = umbrales SUPUESTOS
 // de config/umbrales.json (lectura; los mantiene Backend). Punto hueco = calidad dudosa.
+import { useEffect, useRef, useState } from "react";
 import umbrales from "../../../config/umbrales.json";
 import type { EstadoRecomendacion, PuntoSerie } from "@/types/contratos";
 import { useIdioma } from "../idioma";
 
-const W = 640;
-const H = 240;
-const M = { izq: 44, der: 12, arr: 12, aba: 28 };
+const M = { izq: 40, der: 10, arr: 12, aba: 28 };
 const Y_MAX = 0.5;
 const COLOR: Record<EstadoRecomendacion, string> = {
   sembrar: "var(--primario)",
@@ -19,6 +18,18 @@ type Regla = { estado: EstadoRecomendacion; min?: number; max?: number };
 
 export default function GraficoHumedad({ serie }: { serie: PuntoSerie[] }) {
   const { t, idioma } = useIdioma();
+  // El SVG usa el ancho real en píxeles para que el texto no se achique en el celular.
+  const caja = useRef<HTMLDivElement>(null);
+  const [W, setW] = useState(640);
+  useEffect(() => {
+    const el = caja.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([e]) => setW(Math.max(280, Math.round(e.contentRect.width))));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const H = W < 500 ? 220 : 260;
+
   const puntos = serie.filter((p) => typeof p.humedad_m3m3 === "number");
   if (puntos.length < 2) return <p className="text-sm text-texto-suave">{t("sinDatos")}</p>;
 
@@ -31,8 +42,8 @@ export default function GraficoHumedad({ serie }: { serie: PuntoSerie[] }) {
   const etiquetasX = [puntos[0], puntos[Math.floor(puntos.length / 2)], puntos.at(-1)!];
 
   return (
-    <figure>
-      <svg viewBox={`0 0 ${W} ${H}`} className="h-auto w-full" role="img" aria-label={t("serieTitulo")}>
+    <figure ref={caja}>
+      <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H} className="block h-auto w-full" role="img" aria-label={t("serieTitulo")}>
         {/* Bandas de umbrales */}
         {(umbrales.reglas as Regla[]).map((r, i) => {
           const desde = r.min ?? 0;

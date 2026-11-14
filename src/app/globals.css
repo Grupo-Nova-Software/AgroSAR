@@ -125,6 +125,16 @@ body {
   display: none;
 }
 
+/* Leaflet: mapa base oscurecido en modo oscuro (las teselas OSM solo existen en claro) */
+:root[data-theme="dark"] .leaflet-tile-pane {
+  filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.9) saturate(0.6);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .leaflet-tile-pane {
+    filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.9) saturate(0.6);
+  }
+}
+
 /* Leaflet: controles acordes al tema */
 .leaflet-container {
   font-family: inherit;

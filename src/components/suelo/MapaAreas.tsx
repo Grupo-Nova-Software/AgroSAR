@@ -3,15 +3,13 @@
 // Leaflet se importa dinámicamente porque necesita `window` (no corre en el servidor).
 import "leaflet/dist/leaflet.css";
 import { useEffect, useRef, useState } from "react";
-import type { Map as LMap, Rectangle, TileLayer } from "leaflet";
+import type { Map as LMap, Rectangle } from "leaflet";
 import type { EstadoRecomendacion, SerieHumedad } from "@/types/contratos";
 import { useTema } from "../tema";
 
-const TILES = {
-  light: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-  dark: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
-};
-const ATRIBUCION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>';
+// Teselas de OpenStreetMap (sin API key). En modo oscuro se oscurecen con un filtro CSS (globals.css).
+const TILES = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+const ATRIBUCION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
 
 /** Resuelve un token CSS (p. ej. --primario) a su color actual, porque Leaflet no entiende var(). */
 const colorDe = (token: string) => getComputedStyle(document.documentElement).getPropertyValue(token).trim() || "#287d45";
@@ -46,7 +44,6 @@ export default function MapaAreas({
   const { tema } = useTema();
   const contenedor = useRef<HTMLDivElement>(null);
   const mapa = useRef<LMap | null>(null);
-  const tiles = useRef<TileLayer | null>(null);
   const rects = useRef<Record<string, Rectangle>>({});
   const [listo, setListo] = useState(false);
   const alSeleccionarRef = useRef(alSeleccionar);
@@ -61,11 +58,7 @@ export default function MapaAreas({
       const L = (await import("leaflet")).default;
       if (cancelado || !contenedor.current || mapa.current) return;
       const m = L.map(contenedor.current, { scrollWheelZoom: false, attributionControl: true });
-      tiles.current = L.tileLayer(TILES[tema], {
-        attribution: ATRIBUCION,
-        subdomains: "abcd",
-        maxZoom: 18,
-      }).addTo(m);
+      L.tileLayer(TILES, { attribution: ATRIBUCION, maxZoom: 18 }).addTo(m);
       const grupo: Rectangle[] = [];
       for (const a of areas) {
         const [lo1, la1, lo2, la2] = a.bbox;
@@ -87,14 +80,12 @@ export default function MapaAreas({
       rects.current = {};
       setListo(false);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- se recrea solo si cambian las áreas
   }, [areas]);
 
   // Colores según estado, selección y tema (el tema cambia los valores de los tokens CSS)
   useEffect(() => {
     if (!listo) return;
     pintar(rects.current, estados, seleccionada);
-    tiles.current?.setUrl(TILES[tema]);
   }, [listo, estados, seleccionada, tema]);
 
   return <div ref={contenedor} className="h-72 w-full overflow-hidden rounded-2xl border border-borde md:h-[26rem]" aria-label="Mapa de zonas" />;
