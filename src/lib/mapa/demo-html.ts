@@ -103,7 +103,7 @@ export function demoHTML(): string {
   }
   function popupCelda(f, l) {
     const p = f.properties;
-    l.bindPopup("<b>Celda " + p.id + "</b><br>Cobertura: " + p.cobertura + "<br>Humedad SAR: " + p.humedad_m3m3 + " m³/m³ (" + p.humedad_estado + ")<br>Pendiente: " + p.pendiente_pct + " %<br>Aptitud: <b>" + p.aptitud + "/100</b><br><small>" + p.motivos.join(" · ") + "</small><br><small>Dato FICTICIO</small>");
+    l.bindPopup("<b>Celda " + p.id + "</b><br>Cobertura: " + p.cobertura + "<br>Humedad SAR: " + p.humedad_m3m3 + " m³/m³ (" + p.humedad_estado + ")<br>Pendiente: " + p.pendiente_pct + " %<br>Aptitud: <b>" + p.aptitud + "/100</b><br><small>" + p.motivos.join(" · ") + "</small><br><small>Humedad: " + (p.fuente_humedad === "nisar" ? "NISAR SME2 (real, pasada " + p.fecha_obs + ")" : "FICTICIA") + " · cobertura y pendiente ficticias</small>");
   }
   let cargando = null;
   async function cargarGrilla() {

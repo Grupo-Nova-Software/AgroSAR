@@ -53,7 +53,8 @@ export async function POST(request: Request) {
     const series = await cargarTodas(new URL(request.url).origin);
     const ref = ubicarLote(polys, series);
 
-    const analisis = analizar(cfg, serie, { ...entrada, fecha });
+    // Igual que en las áreas: sin fecha explícita, se analiza a la fecha de la última pasada del satélite.
+    const analisis = analizar(cfg, serie, { ...entrada, fecha: fechaReferencia(serie, entrada.fecha) });
     const sectores = resumirSectores(celdas, ha);
 
     return Response.json({
