@@ -2,28 +2,98 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agrosar/humedad_grilla.v0",
   "title": "Grilla NISAR SME2 de 200 m por área (PROPUESTA v0)",
-  "description": "Producido por el rol Datos (pipeline/07_exportar_grilla.py) en public/data/grilla/<id>.json. Consumido por el backend (mapa de celdas, análisis de lotes) para reemplazar la grilla ficticia. Matrices por fecha: filas de norte a sur (siguen `lat`), columnas de oeste a este (siguen `lon`).",
+  "description": "Producido por el rol Datos (pipeline/07_exportar_grilla.py) en public/data/grilla/<id>.json. Consumido por el backend (mapa de celdas, análisis de lotes) para reemplazar la grilla ficticia. Matrices por fecha: filas de norte a sur (siguen `lat`), columnas de oeste a este (siguen `lon`). public/data/grilla/index.json lista las áreas con su bbox y fechas. La humedad va con 2 decimales.",
   "type": "object",
-  "required": ["id", "zona", "res_m", "fuente", "es_ejemplo", "bbox", "lat", "lon", "fechas", "humedad", "recomendada"],
+  "required": [
+    "id",
+    "zona",
+    "res_m",
+    "fuente",
+    "es_ejemplo",
+    "bbox",
+    "lat",
+    "lon",
+    "fechas",
+    "humedad"
+  ],
   "properties": {
-    "id": { "type": "string", "pattern": "^[a-z0-9_]+$" },
-    "zona": { "type": "string" },
-    "res_m": { "const": 200 },
-    "fuente": { "type": "string" },
-    "es_ejemplo": { "type": "boolean" },
-    "bbox": { "type": "array", "items": { "type": "number" }, "minItems": 4, "maxItems": 4, "description": "[lon_min, lat_min, lon_max, lat_max] del área pedida" },
-    "lat": { "type": "array", "items": { "type": "number" }, "description": "Latitud del centro de cada fila (norte → sur)" },
-    "lon": { "type": "array", "items": { "type": "number" }, "description": "Longitud del centro de cada columna (oeste → este)" },
-    "fechas": { "type": "array", "items": { "type": "string", "format": "date" } },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9_]+$"
+    },
+    "zona": {
+      "type": "string"
+    },
+    "res_m": {
+      "const": 200
+    },
+    "fuente": {
+      "type": "string"
+    },
+    "es_ejemplo": {
+      "type": "boolean"
+    },
+    "bbox": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "minItems": 4,
+      "maxItems": 4,
+      "description": "[lon_min, lat_min, lon_max, lat_max] del área pedida"
+    },
+    "lat": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "description": "Latitud del centro de cada fila (norte → sur)"
+    },
+    "lon": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "description": "Longitud del centro de cada columna (oeste → este)"
+    },
+    "fechas": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "format": "date"
+      }
+    },
     "humedad": {
       "type": "object",
       "description": "Por fecha: matriz [fila][columna] de humedad en m³/m³; null = sin dato, agua o valor no válido",
-      "additionalProperties": { "type": "array", "items": { "type": "array", "items": { "type": ["number", "null"] } } }
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "array",
+          "items": {
+            "type": [
+              "number",
+              "null"
+            ]
+          }
+        }
+      }
     },
     "recomendada": {
       "type": "object",
-      "description": "Por fecha: matriz [fila][columna] con 1 si NISAR marca la estimación como recomendada (bit 0 de retrievalQualityFlag = 0)",
-      "additionalProperties": { "type": "array", "items": { "type": "array", "items": { "enum": [0, 1] } } }
+      "description": "OPCIONAL (el pipeline la incluye con --con-recomendada). Por fecha: matriz [fila][columna] con 1 si NISAR marca la estimación como recomendada (bit 0 de retrievalQualityFlag = 0)",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "array",
+          "items": {
+            "enum": [
+              0,
+              1
+            ]
+          }
+        }
+      }
     }
   }
 }
