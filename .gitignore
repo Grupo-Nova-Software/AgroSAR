@@ -11,3 +11,6 @@ __pycache__/
 venv/
 node_modules/
 .DS_Store
+
+# Configuración personal de Claude Code (permisos por rol)
+.claude/settings.local.json
