@@ -1,9 +1,10 @@
 // GET /api/mapa/celdas?bbox=lon_min,lat_min,lon_max,lat_max&cultivo=soja&fecha=AAAA-MM-DD&res=200  (rol Backend)
 // Grilla tipo NISAR (200 m) con cobertura, pendiente, humedad SAR y aptitud por celda, en GeoJSON,
-// solo dentro de los distritos de trabajo. DATOS FICTICIOS generados de forma determinista.
+// solo dentro de los distritos de trabajo. Humedad NISAR real si hay grilla publicada; cobertura y pendiente ficticias.
 import { esFechaISO } from "@/lib/agro/fechas";
 import { AVISO, cultivoODevolverError, error, manejar } from "@/lib/agro/http";
-import { celdasGeoJSON, COLORES, FUENTE_FICTICIA, generarCeldas, RES_BASE_M } from "@/lib/mapa/celdas";
+import { celdasGeoJSON, COLORES, FUENTE_FICTICIA, FUENTE_REAL_CELDAS, generarCeldas, hayFicticias, RES_BASE_M } from "@/lib/mapa/celdas";
+import { cargarGrillas } from "@/lib/mapa/grilla-nisar";
 import { leerBBox } from "@/lib/mapa/geo";
 import { BBOX_TRABAJO } from "@/lib/mapa/zonas";
 
@@ -24,12 +25,13 @@ export async function GET(request: Request) {
       return error(400, `'res' debe estar entre ${RES_BASE_M} y ${RES_BASE_M * 16} metros`);
     }
 
+    await cargarGrillas(url.origin);
     const { celdas, res_m, recortado } = generarCeldas(bbox, { fecha, cfg, resM: resParam, maxCeldas: 4000 });
     return Response.json({
       ...celdasGeoJSON(celdas),
       aviso: AVISO,
-      fuente: FUENTE_FICTICIA,
-      es_ejemplo: true,
+      fuente: hayFicticias(celdas) ? FUENTE_FICTICIA : FUENTE_REAL_CELDAS,
+      es_ejemplo: hayFicticias(celdas),
       cultivo: cfg.id,
       fecha,
       res_m,
