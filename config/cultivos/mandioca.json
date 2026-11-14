@@ -1,0 +1,78 @@
+{
+  "_estado": "SUPUESTO — el documento del equipo (Mandioca.txt) solo lista problemas, sin fechas ni valores. TODOS los números de este archivo son provisionales y hay que reemplazarlos con fuente (MAG / IPTA).",
+  "id": "mandioca",
+  "nombre": "Mandioca",
+  "nombre_en": "Cassava",
+  "fuente": "Problemas: relevamiento interno del equipo (Mandioca.txt, 2026-11-14). Valores numéricos: SUPUESTOS del equipo de backend, fuente PENDIENTE.",
+  "supuesto": true,
+  "incompleto": true,
+
+  "temporadas": [
+    { "id": "principal", "nombre": "Plantación principal", "inicio": "08-15", "fin": "10-31", "ideal": true, "nota": "SUPUESTO" }
+  ],
+  "tolerancia_temprana_dias": 15,
+  "tramo_tardio_dias": 15,
+  "tardia_max_dias": 45,
+
+  "ciclos": [
+    { "id": "precoz", "nombre": "Precoz", "rango": "~8 meses", "dias": 240 },
+    { "id": "normal", "nombre": "Normal", "rango": "~10 meses", "dias": 300 },
+    { "id": "tardio", "nombre": "Tardío", "rango": "~12 meses", "dias": 365 }
+  ],
+  "ciclo_por_defecto": "normal",
+  "emergencia_dias": 15,
+  "etapas": [
+    { "id": "brotacion", "nombre": "Brotación de las ramas-semilla", "desde": 0, "hasta": 0.1, "critica_agua": true },
+    { "id": "establecimiento", "nombre": "Establecimiento (control de malezas)", "desde": 0.1, "hasta": 0.3, "critica_agua": true, "malezas": true },
+    { "id": "engrosamiento", "nombre": "Engrosamiento de raíces", "desde": 0.3, "hasta": 0.85, "critica_agua": false },
+    { "id": "maduracion", "nombre": "Acumulación de almidón y madurez", "desde": 0.85, "hasta": 1, "critica_agua": false }
+  ],
+  "cosecha_dias_despues_madurez": 0,
+  "ventana_cosecha_dias": 60,
+  "_cosecha_nota": "SUPUESTO: pasado este margen, las raíces se vuelven fibrosas (cosecha tardía).",
+
+  "humedad": { "seco_max": 0.12, "bajo_max": 0.18, "optimo_max": 0.33, "saturado_min": 0.38 },
+  "_humedad_nota": "SUPUESTO: la mandioca tolera mejor la sequía que el exceso de agua (pudrición de raíces).",
+
+  "heladas": { "inicio": "05-15", "fin": "09-10", "sensible": true, "ciclo_largo": true, "nota": "SUPUESTO: el ciclo largo casi siempre pasa por el invierno; la helada daña la parte aérea" },
+
+  "suelo_requisitos": { "ph_min": 5.0, "ph_max": 7.0, "pendiente_max_pct": 10, "drenaje": "bueno" },
+
+  "semillas": [
+    { "suelos": ["arcilloso"], "semilla": "Ramas-semilla sanas en camellones o lomos", "motivo": "Un suelo muy arcilloso retiene agua: elevar la plantación reduce la pudrición (SUPUESTO)" },
+    { "suelos": ["arenoso"], "semilla": "Variedad tolerante a sequía", "motivo": "El suelo arenoso retiene poca agua (SUPUESTO)" },
+    { "suelos": ["degradado"], "semilla": "Variedad rústica de menor exigencia", "motivo": "Suelo degradado o poco fértil (SUPUESTO)" },
+    { "suelos": ["humedo"], "semilla": "Ramas-semilla sanas en camellones, y corregir el drenaje", "motivo": "El exceso de humedad pudre las raíces (SUPUESTO)" },
+    { "condicion": "siembra_tardia", "semilla": "Variedad precoz", "motivo": "Siembra tardía: un ciclo más corto (SUPUESTO)" },
+    { "condicion": "estres_hidrico", "semilla": "Variedad tolerante a sequía", "motivo": "Riesgo de sequía (SUPUESTO)" }
+  ],
+  "semilla_por_defecto": { "semilla": "Ramas-semilla sanas, maduras y de una variedad local probada", "motivo": "Evitar la mala selección de semillas (SUPUESTO)" },
+  "seleccion_semilla": [
+    "Usar ramas sanas, sin plagas ni enfermedades (SUPUESTO)",
+    "Ramas maduras de plantas de 8 a 12 meses (SUPUESTO)",
+    "Trozos de unos 20 cm con 5 a 7 yemas (SUPUESTO)"
+  ],
+
+  "oreo_dias": { "arcilloso": 5, "humedo": 6, "franco": 3, "arenoso": 2, "degradado": 3, "_default": 4 },
+
+  "clima_referencia": null,
+
+  "escenarios": {},
+
+  "problemas": [
+    { "id": "falta_agua", "nombre": "Sequía", "categoria": "agua", "dato": "nisar", "detalle": "Sequía prolongada." },
+    { "id": "exceso_agua", "nombre": "Exceso de lluvia / humedad", "categoria": "agua", "dato": "nisar", "detalle": "Lluvias excesivas y exceso de humedad del suelo." },
+    { "id": "compactacion", "nombre": "Suelo compactado", "categoria": "suelo", "dato": "usuario", "detalle": "Suelo demasiado compacto." },
+    { "id": "nutrientes", "nombre": "Suelo poco fértil", "categoria": "suelo", "dato": "usuario", "detalle": "Suelo poco fértil o degradado." },
+    { "id": "acidez", "nombre": "Exceso de acidez", "categoria": "suelo", "dato": "usuario", "detalle": "pH demasiado bajo." },
+    { "id": "erosion", "nombre": "Terreno con pendiente", "categoria": "suelo", "dato": "usuario", "detalle": "Riesgo de erosión en terrenos con pendiente." },
+    { "id": "drenaje", "nombre": "Suelo muy arcilloso / mal drenaje", "categoria": "suelo", "dato": "usuario", "detalle": "Suelo muy arcilloso y exceso de humedad." },
+    { "id": "preparacion", "nombre": "Mala preparación del terreno", "categoria": "manejo", "dato": "usuario", "detalle": "Mala preparación del terreno." },
+    { "id": "malezas", "nombre": "Malezas", "categoria": "manejo", "dato": "calendario", "detalle": "Competencia de malezas en el establecimiento." },
+    { "id": "cosecha_tardia", "nombre": "Cosecha tardía", "categoria": "temporada", "dato": "calendario", "detalle": "Cosechar fuera de tiempo." },
+    { "id": "semilla", "nombre": "Mala selección de semillas", "categoria": "manejo", "dato": "calendario", "detalle": "Elección de ramas-semilla." },
+    { "id": "helada", "nombre": "Heladas", "categoria": "clima", "dato": "calendario", "detalle": "Heladas durante el ciclo." },
+    { "id": "temperatura", "nombre": "Temperaturas desfavorables", "categoria": "clima", "dato": "clima_pendiente", "detalle": "Temperaturas desfavorables y cambios climáticos inesperados." },
+    { "id": "temporada", "nombre": "Temporada de plantación", "categoria": "temporada", "dato": "calendario", "detalle": "Ventana de plantación (SUPUESTO)." }
+  ]
+}
