@@ -10,7 +10,7 @@ la misma área y sean comparables. Destino: data/raw/<producto>/ (ignorado por g
 Credenciales: getpass (nunca se guardan). Alternativa no interactiva: variables de entorno
 EARTHDATA_USERNAME / EARTHDATA_PASSWORD.
 """
-import argparse, collections, getpass, os, pathlib, sys
+import argparse, collections, getpass, os, pathlib, sys, time
 import asf_search as asf
 
 POLIGONO = "POLYGON((-56.2 -27.4, -55.3 -27.4, -55.3 -26.8, -56.2 -26.8, -56.2 -27.4))"
@@ -36,8 +36,10 @@ def tam(p):
 
 def buscar():
     for nombre, filtro in BUSQUEDAS:
+        print(f"Buscando {nombre} en el catálogo de NASA (suele tardar 2–30 s; si tarda más, CMR está lento: esperá)…", flush=True)
+        t0 = time.time()
         r = asf.search(intersectsWith=POLIGONO, start=DESDE, end=HASTA, maxResults=2000, **filtro)
-        print(f"\n=== {nombre}: {len(r)} resultados")
+        print(f"\n=== {nombre}: {len(r)} resultados ({time.time()-t0:.0f} s)")
         if len(r):
             return nombre, list(r)
         print("    sin resultados, probando respaldo…")
@@ -104,11 +106,37 @@ def main():
         del clave
 
     print(f"Descargando en {destino} …")
-    asf.ASFSearchResults([a, b]).download(path=str(destino), session=sesion, processes=2)
     for p in (a, b):
-        f = destino / p.properties["url"].rsplit("/", 1)[-1]
-        ok = f.exists() and f.stat().st_size == tam(p)
-        print(f"  {'OK ' if ok else 'ERROR'} {f.name} ({f.stat().st_size/1e6 if f.exists() else 0:.0f} MB)")
+        descargar(sesion, p, destino)
+
+
+def descargar(sesion, p, destino):
+    """Descarga con barra de progreso; si el archivo ya está completo, lo saltea."""
+    url = p.properties["url"]
+    f = destino / url.rsplit("/", 1)[-1]
+    esperado = tam(p)
+    if f.exists() and f.stat().st_size == esperado:
+        print(f"  ya existe, se saltea: {f.name}")
+        return
+    parcial = f.with_suffix(f.suffix + ".part")
+    with sesion.get(url, stream=True, timeout=120) as r:
+        if r.status_code in (401, 403):
+            sys.exit(f"Acceso denegado ({r.status_code}). Revisá credenciales y la app 'ASF' en Earthdata.")
+        r.raise_for_status()
+        if "text/html" in r.headers.get("Content-Type", ""):
+            sys.exit("Earthdata devolvió una página HTML (login/EULA) en vez del archivo. "
+                     "Revisá credenciales y aceptá la app/EULA de ASF en urs.earthdata.nasa.gov.")
+        hecho = 0
+        with open(parcial, "wb") as out:
+            for chunk in r.iter_content(chunk_size=1 << 20):
+                out.write(chunk)
+                hecho += len(chunk)
+                pct = 100 * hecho / esperado if esperado else 0
+                print(f"\r  {f.name[:60]}…  {hecho/1e6:6.0f}/{esperado/1e6:.0f} MB  {pct:5.1f}%", end="", flush=True)
+    print()
+    parcial.rename(f)
+    ok = f.stat().st_size == esperado
+    print(f"  {'OK' if ok else 'ERROR tamaño'}: {f.name} ({f.stat().st_size/1e6:.0f} MB)")
 
 
 if __name__ == "__main__":
