@@ -1,4 +1,4 @@
-"""ESQUELETO — convierte .h5 NISAR (data/raw/nisar/) a data/processed/<zona>.json.
+"""ESQUELETO — convierte .h5 NISAR (data/raw/nisar/) a public/data/humedad/<zona>.json.
 
 Esquema de salida:
   {"zona", "bbox":[lon_min,lat_min,lon_max,lat_max],
@@ -34,7 +34,7 @@ def main():
             print(f"{zid}: sin datos procesados aún; no se sobrescribe el JSON de ejemplo.", file=sys.stderr)
             continue
         out = {"zona": z["zona"], "id": zid, "bbox": z["bbox"], "fuente": "NISAR SME2/GCOV (provisional)", "serie": serie}
-        (RAIZ / f"data/processed/{zid}.json").write_text(json.dumps(out, ensure_ascii=False, indent=1))
+        (RAIZ / f"public/data/humedad/{zid}.json").write_text(json.dumps(out, ensure_ascii=False, indent=1))
 
 
 if __name__ == "__main__":
