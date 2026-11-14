@@ -1,62 +1,62 @@
 @import "tailwindcss";
 
-/* Tokens: "mission control" — tinta profunda, papel cálido, un acento ámbar de señal. */
+/* Paleta AgroSAR (diseño: public/imagenes/paletaColoresAgroSAR.jpeg) */
 :root {
-  --bg: #f4f1ea;
-  --surface: #fbf9f4;
-  --ink: #16181d;
-  --muted: #5d6270;
-  --line: #d9d4c7;
-  --signal: #c2410c;
-  --signal-soft: #fde8d9;
-}
+  --verde-principal: #287d45; /* encabezados y botones */
+  --verde-profundo: #1f5936;  /* textos destacados */
+  --verde-suave: #e5f2e8;     /* detalles y fondos */
+  --verde-niebla: #f1f6f0;    /* tarjetas */
+  --blanco: #ffffff;          /* fondo principal */
+  --gris-carbon: #343a36;     /* texto principal */
+  --dorado-cosecha: #d9a441;  /* acentos y alertas */
+  --verde-campo: #a9c47f;     /* indicadores secundarios */
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0b0d12;
-    --surface: #12151c;
-    --ink: #e9e6de;
-    --muted: #9097a6;
-    --line: #262b36;
-    --signal: #fb923c;
-    --signal-soft: #2a1a10;
-  }
+  /* Alias semánticos (usados por los componentes) */
+  --bg: var(--blanco);
+  --surface: var(--verde-niebla);
+  --ink: var(--gris-carbon);
+  --muted: #5f6b63; /* derivado de gris carbón para texto secundario */
+  --line: var(--verde-suave);
+  --signal: var(--dorado-cosecha);
 }
 
 @theme inline {
+  --color-verde-principal: var(--verde-principal);
+  --color-verde-profundo: var(--verde-profundo);
+  --color-verde-suave: var(--verde-suave);
+  --color-verde-niebla: var(--verde-niebla);
+  --color-gris-carbon: var(--gris-carbon);
+  --color-dorado-cosecha: var(--dorado-cosecha);
+  --color-verde-campo: var(--verde-campo);
   --color-bg: var(--bg);
   --color-surface: var(--surface);
   --color-ink: var(--ink);
   --color-muted: var(--muted);
   --color-line: var(--line);
   --color-signal: var(--signal);
-  --color-signal-soft: var(--signal-soft);
-  --font-sans: var(--font-plex-sans);
-  --font-mono: var(--font-plex-mono);
-  --font-display: var(--font-display);
+  --font-sans: var(--font-nunito);
+  --font-logo: var(--font-patrick);
 }
 
 body {
   background: var(--bg);
   color: var(--ink);
-  font-family: var(--font-plex-sans), system-ui, sans-serif;
+  font-family: var(--font-nunito), system-ui, sans-serif;
 }
 
-/* Retícula sutil de fondo, como papel milimetrado de carta de navegación */
-.grid-paper {
-  background-image:
-    linear-gradient(var(--line) 1px, transparent 1px),
-    linear-gradient(90deg, var(--line) 1px, transparent 1px);
-  background-size: 48px 48px;
-  background-position: -1px -1px;
-  mask-image: linear-gradient(to bottom, black, transparent 85%);
+/* Slider móvil: oculta la barra de scroll pero mantiene el desplazamiento */
+.slider-sin-barra {
+  scrollbar-width: none;
+}
+.slider-sin-barra::-webkit-scrollbar {
+  display: none;
 }
 
 :focus-visible {
-  outline: 2px solid var(--signal);
+  outline: 2px solid var(--verde-principal);
   outline-offset: 2px;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  * { transition: none !important; animation: none !important; }
+  * { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
 }
