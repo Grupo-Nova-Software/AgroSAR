@@ -20,6 +20,62 @@
    "pixeles_validos": 14083
   },
   {
+   "fecha": "2026-07-01",
+   "humedad_m3m3": 0.32,
+   "hv_db": -15.9,
+   "calidad": "buena",
+   "pixeles_validos": 8179
+  },
+  {
+   "fecha": "2026-07-13",
+   "humedad_m3m3": 0.301,
+   "hv_db": -17.0,
+   "calidad": "buena",
+   "pixeles_validos": 13964
+  },
+  {
+   "fecha": "2026-07-25",
+   "humedad_m3m3": 0.286,
+   "hv_db": -16.7,
+   "calidad": "buena",
+   "pixeles_validos": 14083
+  },
+  {
+   "fecha": "2026-08-18",
+   "humedad_m3m3": 0.245,
+   "hv_db": -18.5,
+   "calidad": "buena",
+   "pixeles_validos": 14534
+  },
+  {
+   "fecha": "2026-08-30",
+   "humedad_m3m3": 0.209,
+   "hv_db": -18.9,
+   "calidad": "buena",
+   "pixeles_validos": 14456
+  },
+  {
+   "fecha": "2026-09-11",
+   "humedad_m3m3": 0.292,
+   "hv_db": -17.9,
+   "calidad": "buena",
+   "pixeles_validos": 14733
+  },
+  {
+   "fecha": "2026-09-23",
+   "humedad_m3m3": 0.24,
+   "hv_db": -19.0,
+   "calidad": "buena",
+   "pixeles_validos": 14698
+  },
+  {
+   "fecha": "2026-10-05",
+   "humedad_m3m3": 0.25,
+   "hv_db": -17.8,
+   "calidad": "buena",
+   "pixeles_validos": 14419
+  },
+  {
    "fecha": "2026-10-17",
    "humedad_m3m3": 0.24,
    "hv_db": -18.5,
