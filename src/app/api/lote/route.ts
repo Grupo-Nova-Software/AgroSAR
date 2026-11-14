@@ -71,6 +71,8 @@ export async function POST(request: Request) {
       },
       sectores,
       analisis,
+      serie: serie.serie, // evolución de la humedad en ESTE lote (para el gráfico)
+      fuente_serie: serie.fuente,
       celdas: celdas.length <= 800 ? celdasGeoJSON(celdas) : null,
     });
   });
