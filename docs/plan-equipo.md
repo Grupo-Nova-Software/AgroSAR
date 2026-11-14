@@ -68,7 +68,7 @@ AgroSAR/
    - ✅ *Restrict deletions* · ✅ *Block force pushes*
    - ✅ *Require a pull request before merging* → Required approvals: **1** (otra persona revisa; en un apuro, el admin puede saltearlo)
    - Opcional: *Require linear history* (combina bien con squash merge)
-   - Settings → General → Pull Requests: dejar solo **Allow squash merging** y activar *Automatically delete head branches* **desactivado** (las ramas personales se reutilizan).
+   - Settings → General → Pull Requests: dejar solo **Allow squash merging** y dejar **desactivado** *Automatically delete head branches* (las ramas personales se reutilizan).
 2. Settings → Collaborators/Teams: dar rol **Write** a los otros 2.
 3. Cada integrante:
    ```bash
