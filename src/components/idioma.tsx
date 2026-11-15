@@ -63,6 +63,44 @@ const TEXTOS = {
   ha: { es: "ha", en: "ha" },
   zona: { es: "Zona", en: "Area" },
 
+  dondeEstoy: { es: "Dónde estoy", en: "Where I am" },
+  zonasConDatos: { es: "Zonas con datos", en: "Areas with data" },
+  agregarOtra: { es: "Agregar otra chacra", en: "Add another field" },
+  cambiarForma: { es: "Cambiar forma", en: "Change shape" },
+  cancelar: { es: "Cancelar", en: "Cancel" },
+  guardar: { es: "Guardar", en: "Save" },
+
+  // Mis chacras
+  navChacras: { es: "Mis chacras", en: "My fields" },
+  chacrasTitulo: { es: "Mis chacras", en: "My fields" },
+  chacrasSub: { es: "Cómo están todas tus chacras, de un vistazo.", en: "How all your fields are doing, at a glance." },
+  chacrasVacio: {
+    es: "Todavía no marcaste ninguna chacra. Marcala en el mapa y la vas a poder seguir desde acá.",
+    en: "You haven't marked any field yet. Mark it on the map and you'll follow it from here.",
+  },
+  marcarPrimera: { es: "Marcar mi primera chacra", en: "Mark my first field" },
+  verEnMapa: { es: "Ver en el mapa", en: "See on the map" },
+  nombreChacra: { es: "Nombre de la chacra", en: "Field name" },
+  renombrar: { es: "Cambiar nombre", en: "Rename" },
+  queSiembra: { es: "¿Qué sembrás acá?", en: "What do you sow here?" },
+  borrarChacra: { es: "Borrar esta chacra", en: "Delete this field" },
+  confirmarBorrar: { es: "¿Borrar «{nombre}»? No se puede deshacer.", en: "Delete «{nombre}»? This can't be undone." },
+  actualizando: { es: "Actualizando…", en: "Updating…" },
+  sinConexion: {
+    es: "Sin internet: te mostramos lo último que guardamos en el teléfono.",
+    en: "No internet: showing the last data saved on your phone.",
+  },
+  guardadoEl: { es: "Guardado el {fecha}", en: "Saved on {fecha}" },
+  sinResultado: { es: "Conectate a internet para ver cómo está.", en: "Connect to the internet to see how it is." },
+  resumenChacras: {
+    es: "{s} para sembrar · {e} esperar · {p} no sembrar",
+    en: "{s} to sow · {e} wait · {p} don't sow",
+  },
+  chacraGuardada: { es: "¡Chacra guardada! Mirá cómo está 👇", en: "Field saved! See how it is 👇" },
+  verResultado: { es: "Ver cómo está mi chacra", en: "See how my field is" },
+  verConsejo: { es: "Ver qué me conviene", en: "See what to do" },
+  elegirChacra: { es: "Tocá una chacra en el mapa para ver cómo está.", en: "Tap a field on the map to see how it is." },
+
   // Resultado
   tuChacra: { es: "Tu chacra", en: "Your field" },
   zonaDe: { es: "Zona", en: "Area" },
@@ -154,12 +192,16 @@ const TEXTOS = {
   ayudaComo: { es: "Cómo se usa", en: "How to use it" },
   ayudaPaso1: { es: "Elegí tu cultivo en el inicio.", en: "Pick your crop on the home screen." },
   ayudaPaso2: {
-    es: "En el mapa, tocá «Marcar mi chacra» y después tocá cada esquina de tu terreno.",
-    en: "On the map, tap «Mark my field», then tap each corner of your land.",
+    es: "En el mapa, tocá «Marcar mi chacra», tocá cada esquina de tu terreno y después «Guardar». Podés marcar varias.",
+    en: "On the map, tap «Mark my field», tap each corner of your land, then «Save». You can mark several.",
   },
   ayudaPaso3: {
-    es: "Mirá el cartel de color: te dice si conviene sembrar, esperar o no sembrar.",
-    en: "Look at the colored sign: it tells you to sow, wait, or not sow.",
+    es: "Mirá el cartel de color: te dice si conviene sembrar, esperar o no sembrar. En «Mis chacras» ves todas juntas.",
+    en: "Look at the colored sign: it tells you to sow, wait, or not sow. «My fields» shows them all together.",
+  },
+  ayudaSinInternet: {
+    es: "Sin internet: tus chacras y el último resultado quedan guardados en el teléfono, y el mapa de las zonas que ya miraste también.",
+    en: "Offline: your fields and their last result stay saved on your phone, and so does the map of the areas you already viewed.",
   },
   ayudaColores: { es: "Qué significan los colores", en: "What the colors mean" },
   ayudaVerde: { es: "Verde: buen momento para sembrar.", en: "Green: good time to sow." },

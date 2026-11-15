@@ -54,6 +54,7 @@ export default function VistaAyuda() {
           <div className="mt-3 space-y-3 text-lg leading-relaxed">
             <p>{t("ayudaDatos1")}</p>
             <p>{t("ayudaDatos2")}</p>
+            <p>📵 {t("ayudaSinInternet")}</p>
             <p className="rounded-2xl bg-dorado/20 px-4 py-3 font-bold">{t("ayudaDatos3")}</p>
             <p className="text-base text-texto-suave">{t("ayudaFuentes")}</p>
             <p className="text-base text-texto-suave">{t("pie")}</p>

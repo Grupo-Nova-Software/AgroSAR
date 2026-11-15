@@ -2,24 +2,26 @@
 // Mapa de campo (Leaflet) con vista aérea.
 // - Base: Esri World Imagery (satélite) + capa opcional de nombres de lugares; alternativa "Calles" (OSM).
 // - Capa "Agua en el suelo": imagen NISAR SME2 por fecha (public/data/mapa_humedad), con flechas para cambiar de pasada.
-// - Punto azul con la ubicación del usuario y botón para volver a ella.
-// - Marcar la chacra: se tocan las esquinas en cualquier orden (se acomodan solas), se pueden arrastrar y deshacer.
-// - Zonas de análisis: contorno; al tocar una, se elige.
+// - Abre mirando DONDE ESTÁ EL USUARIO (última ubicación guardada + GPS). Botones grandes para ir a: mi ubicación,
+//   las zonas con datos del satélite y mis chacras.
+// - Varias chacras, cada una con su color y su nombre. Se marcan tocando las esquinas en cualquier orden
+//   (se acomodan solas), se pueden arrastrar y deshacer.
 // Leaflet maneja el <div> del mapa: React NUNCA le cambia las clases (si no, el mapa pierde sus estilos y queda liso).
 import "leaflet/dist/leaflet.css";
 import { useEffect, useRef, useState } from "react";
 import type { Circle, ImageOverlay, LayerGroup, Map as LMap, Marker, Rectangle } from "leaflet";
 import type { EstadoRecomendacion, SerieHumedad } from "@/types/contratos";
+import { guardarUbicacion, leerUltimaUbicacion, type Chacra } from "../chacras";
 import { useIdioma } from "../idioma";
-import { dentroDe, hectareasDe, insertarEsquina, type LonLat } from "./api";
+import { hectareasDe, insertarEsquina, type LonLat } from "./api";
 
 const ESRI_SAT = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
 const ESRI_NOMBRES = "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}";
 const OSM = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
-const ITAPUA: [number, number, number, number] = [-57.05, -27.61, -54.64, -26.09];
 
 const colorDe = (token: string) => getComputedStyle(document.documentElement).getPropertyValue(token).trim() || "#287d45";
 const TOKEN_ESTADO: Record<EstadoRecomendacion, string> = { sembrar: "--primario", esperar: "--dorado", precaucion: "--peligro" };
+const ll = (v: LonLat[]) => v.map(([lon, lat]) => [lat, lon] as [number, number]);
 
 interface IndiceMapa { bbox: [number, number, number, number]; fechas: string[]; escala: { color: string }[] }
 
@@ -28,16 +30,22 @@ export default function MapaCampo({
   estados,
   seleccionada,
   alSeleccionar,
-  chacra,
-  alCambiarChacra,
+  chacras,
+  chacraSel,
+  alElegirChacra,
+  alGuardarChacra,
+  dibujarAlAbrir = false,
   alUbicar,
 }: {
   areas: SerieHumedad[];
   estados: Record<string, EstadoRecomendacion | undefined>;
   seleccionada: string;
   alSeleccionar: (id: string) => void;
-  chacra: LonLat[] | null;
-  alCambiarChacra: (v: LonLat[] | null) => void;
+  chacras: Chacra[];
+  chacraSel: string | null;
+  alElegirChacra: (id: string) => void;
+  alGuardarChacra: (vertices: LonLat[], editandoId: string | null) => void;
+  dibujarAlAbrir?: boolean;
   alUbicar?: (p: LonLat) => void;
 }) {
   const { t, fecha, idioma } = useIdioma();
@@ -45,12 +53,14 @@ export default function MapaCampo({
   const mapa = useRef<LMap | null>(null);
   const LRef = useRef<typeof import("leaflet") | null>(null);
   const rects = useRef<Record<string, Rectangle>>({});
-  const capaChacra = useRef<LayerGroup | null>(null);
+  const capaChacras = useRef<LayerGroup | null>(null);
+  const capaDibujo = useRef<LayerGroup | null>(null);
   const capaHumedad = useRef<ImageOverlay | null>(null);
   const ubic = useRef<{ punto: Marker; circulo: Circle; pos: LonLat } | null>(null);
   const [listo, setListo] = useState(false);
 
   const [dibujando, setDibujando] = useState(false);
+  const [editandoId, setEditandoId] = useState<string | null>(null);
   const [vertices, setVertices] = useState<LonLat[]>([]);
   const historial = useRef<LonLat[][]>([]);
   const [indice, setIndice] = useState<IndiceMapa | null>(null);
@@ -59,9 +69,9 @@ export default function MapaCampo({
   const [avisoUbic, setAvisoUbic] = useState(false);
 
   // Valores que los manejadores de Leaflet necesitan leer "al día"
-  const vivo = useRef({ dibujando, vertices, chacra, alSeleccionar, alUbicar });
+  const vivo = useRef({ dibujando, vertices, alSeleccionar, alElegirChacra, alUbicar, chacraSel });
   useEffect(() => {
-    vivo.current = { dibujando, vertices, chacra, alSeleccionar, alUbicar };
+    vivo.current = { dibujando, vertices, alSeleccionar, alElegirChacra, alUbicar, chacraSel };
   });
 
   useEffect(() => {
@@ -79,35 +89,37 @@ export default function MapaCampo({
       const L = (await import("leaflet")).default;
       if (cancelado || !contenedor.current || mapa.current) return;
       LRef.current = L;
-      const m = L.map(contenedor.current, { maxZoom: 19, zoomControl: true });
+      const m = L.map(contenedor.current, { maxZoom: 19, zoomControl: false });
       m.createPane("humedad").style.zIndex = "350";
+      L.control.zoom({ position: "bottomright" }).addTo(m);
 
-      const satelite = L.tileLayer(ESRI_SAT, { maxNativeZoom: 18, maxZoom: 19, attribution: "Esri, Maxar, Earthstar Geographics" }).addTo(m);
-      const calles = L.tileLayer(OSM, { maxZoom: 19, attribution: "&copy; OpenStreetMap" });
-      const nombres = L.tileLayer(ESRI_NOMBRES, { maxNativeZoom: 18, maxZoom: 19, pane: "overlayPane" }).addTo(m);
+      // crossOrigin: las teselas se piden con CORS, así el service worker puede guardarlas para usar sin internet
+      const satelite = L.tileLayer(ESRI_SAT, { maxNativeZoom: 18, maxZoom: 19, crossOrigin: true, attribution: "Esri, Maxar, Earthstar Geographics" }).addTo(m);
+      const calles = L.tileLayer(OSM, { maxZoom: 19, crossOrigin: true, attribution: "&copy; OpenStreetMap" });
+      const nombres = L.tileLayer(ESRI_NOMBRES, { maxNativeZoom: 18, maxZoom: 19, crossOrigin: true, pane: "overlayPane" }).addTo(m);
       L.control.layers({ [t("capaSatelite")]: satelite, [t("capaCalles")]: calles }, { [t("capaNombres")]: nombres }, { position: "topright" }).addTo(m);
-      L.control.scale({ imperial: false, position: "bottomright" }).addTo(m);
+      L.control.scale({ imperial: false, position: "bottomleft" }).addTo(m);
 
-      // Zonas: primero las más grandes, para que las chicas queden arriba y se puedan tocar
+      // Zonas con datos: primero las más grandes, para que las chicas queden arriba y se puedan tocar
       const tam = (a: SerieHumedad) => (a.bbox[2] - a.bbox[0]) * (a.bbox[3] - a.bbox[1]);
-      const grupo: Rectangle[] = [];
       for (const a of [...areas].sort((x, y) => tam(y) - tam(x))) {
         const [lo1, la1, lo2, la2] = a.bbox;
-        const r = L.rectangle([[la1, lo1], [la2, lo2]], { fillOpacity: 0.01 })
+        rects.current[a.id] = L.rectangle([[la1, lo1], [la2, lo2]], { fillOpacity: 0.01 })
           .addTo(m)
           .bindTooltip(a.zona, { direction: "top", sticky: true, className: "etiqueta-zona" })
           .on("click", () => {
             if (!vivo.current.dibujando) vivo.current.alSeleccionar(a.id);
           });
-        rects.current[a.id] = r;
-        grupo.push(r);
       }
-      capaChacra.current = L.layerGroup().addTo(m);
+      capaChacras.current = L.layerGroup().addTo(m);
+      capaDibujo.current = L.layerGroup().addTo(m);
 
-      const guardada = vivo.current.chacra;
-      if (guardada && guardada.length >= 3) m.fitBounds(L.latLngBounds(guardada.map(([lon, lat]) => [lat, lon] as [number, number])), { padding: [60, 60], maxZoom: 17 });
-      else if (grupo.length) m.fitBounds(L.featureGroup(grupo).getBounds(), { padding: [10, 10] });
-      else m.setView([-26.9, -55.4], 9);
+      // Vista inicial: la chacra pedida > donde está el usuario (última ubicación conocida) > las zonas
+      const sel = chacras.find((c) => c.id === vivo.current.chacraSel);
+      const ultima = leerUltimaUbicacion();
+      if (sel) m.fitBounds(L.latLngBounds(ll(sel.vertices)), { padding: [50, 50], maxZoom: 17 });
+      else if (ultima) m.setView([ultima[1], ultima[0]], 15);
+      else irAZonas(m);
 
       // Tocar el mapa en modo dibujo = agregar una esquina
       m.on("click", (e) => {
@@ -119,28 +131,31 @@ export default function MapaCampo({
         setVertices(insertarEsquina(vivo.current.vertices, p));
       });
 
-      // Ubicación del usuario: punto azul. La primera vez, si está en Itapúa y no tiene chacra guardada, el mapa va ahí.
+      // Ubicación del usuario: punto azul. La primera vez, el mapa se centra ahí (salvo que se pidió una chacra).
       let primera = true;
       if ("geolocation" in navigator) {
         vigilancia = navigator.geolocation.watchPosition(
           (g) => {
             const pos: LonLat = [g.coords.longitude, g.coords.latitude];
-            const ll: [number, number] = [pos[1], pos[0]];
+            const p: [number, number] = [pos[1], pos[0]];
             if (!ubic.current) {
-              const circulo = L.circle(ll, { radius: g.coords.accuracy, color: "#2b7fff", weight: 1, fillOpacity: 0.12, interactive: false }).addTo(m);
-              const punto = L.marker(ll, { icon: L.divIcon({ className: "", html: '<div class="punto-ubicacion"></div>', iconSize: [18, 18], iconAnchor: [9, 9] }), interactive: false, zIndexOffset: 500 }).addTo(m);
+              const circulo = L.circle(p, { radius: g.coords.accuracy, color: "#2b7fff", weight: 1, fillOpacity: 0.12, interactive: false }).addTo(m);
+              const punto = L.marker(p, {
+                icon: L.divIcon({ className: "", html: '<div class="punto-ubicacion"></div>', iconSize: [18, 18], iconAnchor: [9, 9] }),
+                interactive: false,
+                zIndexOffset: 500,
+              }).addTo(m);
               ubic.current = { punto, circulo, pos };
             } else {
-              ubic.current.punto.setLatLng(ll);
-              ubic.current.circulo.setLatLng(ll).setRadius(g.coords.accuracy);
+              ubic.current.punto.setLatLng(p);
+              ubic.current.circulo.setLatLng(p).setRadius(g.coords.accuracy);
               ubic.current.pos = pos;
             }
+            guardarUbicacion(pos);
             if (primera) {
               primera = false;
-              if (dentroDe(pos, ITAPUA)) {
-                if (!vivo.current.chacra && !vivo.current.dibujando) m.setView(ll, 15);
-                vivo.current.alUbicar?.(pos);
-              }
+              if (!vivo.current.chacraSel && !vivo.current.dibujando) m.setView(p, Math.max(m.getZoom(), 15));
+              vivo.current.alUbicar?.(pos);
             }
           },
           () => {},
@@ -150,6 +165,7 @@ export default function MapaCampo({
 
       mapa.current = m;
       setListo(true);
+      if (dibujarAlAbrir) setDibujando(true);
     })();
     return () => {
       cancelado = true;
@@ -164,6 +180,20 @@ export default function MapaCampo({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- el mapa se recrea solo si cambian las áreas o el idioma (nombres de las capas)
   }, [areas, idioma]);
 
+  function irAZonas(m = mapa.current) {
+    const L = LRef.current;
+    if (!m || !L) return;
+    const r = Object.values(rects.current);
+    if (r.length) m.fitBounds(L.featureGroup(r).getBounds(), { padding: [12, 12] });
+    else m.setView([-26.9, -55.4], 9);
+  }
+  function irAChacras() {
+    const m = mapa.current;
+    const L = LRef.current;
+    if (!m || !L || !chacras.length) return;
+    m.fitBounds(L.latLngBounds(chacras.flatMap((c) => ll(c.vertices))), { padding: [50, 50], maxZoom: 17 });
+  }
+
   // ---------- Contorno de las zonas ----------
   useEffect(() => {
     if (!listo) return;
@@ -177,6 +207,40 @@ export default function MapaCampo({
       );
     }
   }, [listo, estados, seleccionada]);
+
+  // ---------- Chacras guardadas (color y nombre propios) ----------
+  useEffect(() => {
+    const L = LRef.current;
+    const capa = capaChacras.current;
+    if (!listo || !L || !capa) return;
+    capa.clearLayers();
+    for (const c of chacras) {
+      if (dibujando && c.id === editandoId) continue; // se está redibujando
+      const sel = c.id === chacraSel;
+      L.polygon(ll(c.vertices), {
+        color: c.color,
+        weight: sel ? 5 : 3,
+        fillColor: c.color,
+        fillOpacity: sel ? 0.32 : 0.18,
+      })
+        .bindTooltip(c.nombre, { permanent: true, direction: "center", className: "etiqueta-chacra" })
+        .on("click", () => {
+          if (!vivo.current.dibujando) vivo.current.alElegirChacra(c.id);
+        })
+        .addTo(capa);
+    }
+  }, [listo, chacras, chacraSel, dibujando, editandoId]);
+
+  // Ir a la chacra elegida desde afuera del mapa (lista, menú)
+  const anteriorSel = useRef(chacraSel);
+  useEffect(() => {
+    const m = mapa.current;
+    const L = LRef.current;
+    if (!listo || !m || !L || !chacraSel || chacraSel === anteriorSel.current) return;
+    anteriorSel.current = chacraSel;
+    const c = chacras.find((x) => x.id === chacraSel);
+    if (c) m.flyToBounds(L.latLngBounds(ll(c.vertices)), { padding: [50, 50], maxZoom: 17, duration: 0.8 });
+  }, [listo, chacraSel, chacras]);
 
   // ---------- Capa de agua en el suelo (NISAR) ----------
   const fechas = indice?.fechas ?? [];
@@ -199,24 +263,20 @@ export default function MapaCampo({
     }
   }, [listo, verHumedad, dibujando, indice, fechaSel]);
 
-  // ---------- Dibujo de la chacra ----------
+  // ---------- Dibujo de una chacra (nueva o cambiando la forma) ----------
   useEffect(() => {
     const L = LRef.current;
-    const capa = capaChacra.current;
+    const capa = capaDibujo.current;
     if (!listo || !L || !capa) return;
     capa.clearLayers();
-    const pts = dibujando ? vertices : (chacra ?? []);
-    if (!pts.length) return;
-    const ll = (v: LonLat[]) => v.map(([lon, lat]) => [lat, lon] as [number, number]);
-    const primario = colorDe("--primario");
-    const estilo = { color: "#ffffff", weight: 4, fillColor: primario, fillOpacity: dibujando ? 0.18 : 0.12, dashArray: dibujando ? "8 8" : undefined, interactive: false };
-    const forma = pts.length >= 3 ? L.polygon(ll(pts), estilo) : L.polyline(ll(pts), estilo);
+    if (!dibujando || !vertices.length) return;
+    const estilo = { color: "#ffffff", weight: 4, fillColor: colorDe("--primario"), fillOpacity: 0.2, dashArray: "8 8", interactive: false };
+    const forma = vertices.length >= 3 ? L.polygon(ll(vertices), estilo) : L.polyline(ll(vertices), estilo);
     forma.addTo(capa);
-    if (!dibujando) return;
 
     // Esquinas arrastrables: durante el arrastre se mueve la figura; al soltar se guarda.
-    const copia = pts.map((p) => [...p] as LonLat);
-    pts.forEach((p, i) => {
+    const copia = vertices.map((p) => [...p] as LonLat);
+    vertices.forEach((p, i) => {
       const marcador = L.marker([p[1], p[0]], {
         draggable: true,
         icon: L.divIcon({ className: "", html: '<div class="esquina-chacra"></div>', iconSize: [26, 26], iconAnchor: [13, 13] }),
@@ -227,37 +287,48 @@ export default function MapaCampo({
         forma.setLatLngs(ll(copia));
       });
       marcador.on("dragend", () => {
-        historial.current.push(pts);
+        historial.current.push(vertices);
         setVertices(copia.map((c) => [...c] as LonLat));
       });
     });
-  }, [listo, dibujando, vertices, chacra]);
+  }, [listo, dibujando, vertices]);
 
   // ---------- Acciones ----------
-  const empezar = () => {
+  const empezarNueva = () => {
     historial.current = [];
-    setVertices(chacra ?? []);
+    setEditandoId(null);
+    setVertices([]);
+    setDibujando(true);
+  };
+  const cambiarForma = () => {
+    const c = chacras.find((x) => x.id === chacraSel);
+    if (!c) return;
+    historial.current = [];
+    setEditandoId(c.id);
+    setVertices(c.vertices);
     setDibujando(true);
   };
   const terminar = () => {
     if (vertices.length < 3) return;
     setDibujando(false);
-    alCambiarChacra(vertices);
+    alGuardarChacra(vertices, editandoId);
+    setEditandoId(null);
+    setVertices([]);
+  };
+  const cancelar = () => {
+    setDibujando(false);
+    setEditandoId(null);
+    setVertices([]);
   };
   const deshacer = () => {
     const previo = historial.current.pop();
     if (previo) setVertices(previo);
   };
-  const borrar = () => {
-    historial.current = [];
-    setVertices([]);
-    if (!dibujando) alCambiarChacra(null);
-  };
   const irAMiUbicacion = () => {
     const m = mapa.current;
     if (!m) return;
     if (ubic.current) {
-      m.setView([ubic.current.pos[1], ubic.current.pos[0]], Math.max(m.getZoom(), 16));
+      m.flyTo([ubic.current.pos[1], ubic.current.pos[0]], Math.max(m.getZoom(), 16), { duration: 0.8 });
       return;
     }
     const fallo = () => {
@@ -265,7 +336,10 @@ export default function MapaCampo({
       setTimeout(() => setAvisoUbic(false), 6000);
     };
     if (!("geolocation" in navigator)) return fallo();
-    navigator.geolocation.getCurrentPosition((g) => m.setView([g.coords.latitude, g.coords.longitude], 16), fallo, { enableHighAccuracy: true, timeout: 15_000 });
+    navigator.geolocation.getCurrentPosition((g) => m.flyTo([g.coords.latitude, g.coords.longitude], 16, { duration: 0.8 }), fallo, {
+      enableHighAccuracy: true,
+      timeout: 15_000,
+    });
   };
   const moverFecha = (d: number) => {
     if (!fechas.length) return;
@@ -278,6 +352,7 @@ export default function MapaCampo({
   const degradado = indice ? `linear-gradient(90deg, ${indice.escala.map((e) => e.color).join(", ")})` : undefined;
   const iActual = iFecha < 0 ? fechas.length - 1 : iFecha;
   const botonChico = "grid h-10 w-10 place-items-center rounded-full bg-barra text-xl font-bold text-texto shadow-suave backdrop-blur disabled:opacity-35";
+  const chip = "flex h-11 shrink-0 items-center gap-1.5 rounded-full bg-white/95 px-3.5 text-[15px] font-bold text-[#1e2420] shadow-lg";
 
   return (
     <div>
@@ -285,35 +360,38 @@ export default function MapaCampo({
         {/* El div que maneja Leaflet: clases fijas, nunca cambian */}
         <div ref={contenedor} className="h-[62svh] min-h-[22rem] w-full md:h-[34rem] md:rounded-3xl" aria-label={t("capaSatelite")} />
 
+        {/* Ir a… (arriba, botones grandes) */}
+        {!dibujando && (
+          <div className="absolute left-2 right-14 top-2 z-[1100] flex flex-wrap gap-1.5">
+            <button type="button" onClick={irAMiUbicacion} className={chip}>
+              <span className="punto-ubicacion !h-3.5 !w-3.5 !border-2" aria-hidden />
+              {t("dondeEstoy")}
+            </button>
+            <button type="button" onClick={() => irAZonas()} className={chip}>
+              🛰️ {t("zonasConDatos")}
+            </button>
+            {chacras.length > 0 && (
+              <button type="button" onClick={irAChacras} className={chip}>
+                🌾 {t("navChacras")}
+              </button>
+            )}
+          </div>
+        )}
+
         {dibujando && (
-          <p className="pointer-events-none absolute inset-x-3 top-3 z-[1100] mx-auto max-w-md rounded-2xl bg-black/75 px-4 py-3 text-center text-base font-bold text-white">
+          <p className="pointer-events-none absolute inset-x-3 top-3 z-[1100] mx-auto max-w-md rounded-2xl bg-black/80 px-4 py-3 text-center text-base font-bold text-white">
             {vertices.length === 0 ? t("ayudaDibujo0") : t("ayudaDibujoN")}
           </p>
         )}
-
-        {/* Mi ubicación */}
-        <button
-          type="button"
-          onClick={irAMiUbicacion}
-          aria-label={t("miUbicacion")}
-          title={t("miUbicacion")}
-          className="absolute right-3 top-20 z-[1100] grid h-12 w-12 place-items-center rounded-full bg-white text-[#2b7fff] shadow-lg"
-        >
-          <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden>
-            <circle cx="12" cy="12" r="3.5" fill="currentColor" />
-            <circle cx="12" cy="12" r="8" />
-            <path d="M12 1.5v3M12 19.5v3M1.5 12h3M19.5 12h3" />
-          </svg>
-        </button>
         {avisoUbic && (
-          <p role="alert" className="absolute inset-x-3 top-36 z-[1100] mx-auto max-w-md rounded-2xl bg-black/80 px-4 py-3 text-center text-sm font-bold text-white">
+          <p role="alert" className="absolute inset-x-3 top-16 z-[1100] mx-auto max-w-md rounded-2xl bg-black/85 px-4 py-3 text-center text-sm font-bold text-white">
             {t("sinUbicacion")}
           </p>
         )}
 
         {/* Agua en el suelo: encender/apagar, leyenda y fecha de la pasada */}
         {!dibujando && indice && fechaSel && (
-          <div className="absolute bottom-3 left-3 z-[1100] w-[min(17rem,calc(100%-5.5rem))] rounded-2xl bg-barra p-2.5 shadow-suave backdrop-blur">
+          <div className="absolute bottom-8 left-2 z-[1100] w-[min(17rem,calc(100%-4.5rem))] rounded-2xl bg-barra p-2.5 shadow-suave backdrop-blur">
             <button
               type="button"
               role="switch"
@@ -329,7 +407,7 @@ export default function MapaCampo({
             {verHumedad && (
               <>
                 <div className="mt-2 h-3 rounded-full" style={{ background: degradado }} />
-                <div className="mt-0.5 flex justify-between text-xs font-bold text-texto-suave">
+                <div className="mt-0.5 flex justify-between text-xs font-bold text-texto">
                   <span>{t("seco")}</span>
                   <span>{t("bueno")}</span>
                   <span>{t("mojado")}</span>
@@ -355,12 +433,12 @@ export default function MapaCampo({
       <div className="flex flex-wrap gap-2 px-3 pt-3 md:px-0">
         {!dibujando ? (
           <>
-            <button type="button" onClick={empezar} className="h-14 flex-1 rounded-2xl bg-primario px-5 text-lg font-bold text-sobre-primario shadow-suave hover:bg-primario-hover">
-              ✏️ {chacra ? t("cambiarChacra") : t("marcarChacra")}
+            <button type="button" onClick={empezarNueva} className="h-14 flex-1 rounded-2xl bg-primario px-5 text-lg font-bold text-sobre-primario shadow-suave hover:bg-primario-hover">
+              ＋ {chacras.length ? t("agregarOtra") : t("marcarChacra")}
             </button>
-            {chacra && (
-              <button type="button" onClick={borrar} className="h-14 rounded-2xl border-2 border-borde bg-tarjeta px-5 text-lg font-bold text-texto">
-                ✕ {t("borrar")}
+            {chacraSel && (
+              <button type="button" onClick={cambiarForma} className="h-14 rounded-2xl border-2 border-borde bg-tarjeta px-4 text-base font-bold text-texto">
+                ✏️ {t("cambiarForma")}
               </button>
             )}
           </>
@@ -369,11 +447,11 @@ export default function MapaCampo({
             <button type="button" onClick={deshacer} disabled={!vertices.length} className="h-14 rounded-2xl border-2 border-borde bg-tarjeta px-4 text-base font-bold text-texto disabled:opacity-40">
               ↶ {t("deshacer")}
             </button>
-            <button type="button" onClick={borrar} disabled={!vertices.length} className="h-14 rounded-2xl border-2 border-borde bg-tarjeta px-4 text-base font-bold text-texto disabled:opacity-40">
-              ✕ {t("borrar")}
+            <button type="button" onClick={cancelar} className="h-14 rounded-2xl border-2 border-borde bg-tarjeta px-4 text-base font-bold text-texto">
+              ✕ {t("cancelar")}
             </button>
             <button type="button" onClick={terminar} disabled={vertices.length < 3} className="h-14 flex-1 rounded-2xl bg-primario px-5 text-lg font-bold text-sobre-primario shadow-suave disabled:opacity-40">
-              ✓ {t("listo")}
+              ✓ {t("guardar")}
               {vertices.length >= 3 ? ` · ${num(ha)} ${t("ha")}` : ""}
             </button>
           </>

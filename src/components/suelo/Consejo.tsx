@@ -31,22 +31,38 @@ export default function Consejo({
   analisis,
   umbrales,
   cultivo,
+  marca,
+  aviso,
   children,
+  pie,
 }: {
   titulo: string;
   subtitulo?: string;
   analisis?: Analisis;
   umbrales: UmbralesHumedad;
   cultivo: string; // nombre del cultivo para usar dentro de una frase
+  marca?: string; // color distintivo de la chacra
+  aviso?: ReactNode; // p. ej. "sin internet: dato guardado"
   children?: ReactNode;
+  pie?: ReactNode; // al final de la tarjeta (editor de la chacra)
 }) {
   const { t, fecha, idioma } = useIdioma();
+
+  const encabezado = (
+    <h2 className="flex items-center gap-2 font-display text-2xl font-bold leading-tight">
+      {marca && <span className="h-6 w-6 shrink-0 rounded-full border-2 border-texto/30" style={{ background: marca }} aria-hidden />}
+      {titulo}
+    </h2>
+  );
 
   if (!analisis) {
     return (
       <section className="rounded-3xl border border-borde bg-tarjeta p-5">
-        <h2 className="font-display text-2xl font-bold">{titulo}</h2>
+        {encabezado}
+        {aviso}
+        {children}
         <div className="mt-3 h-40 animate-pulse rounded-2xl bg-tarjeta-2" />
+        {pie}
       </section>
     );
   }
@@ -75,8 +91,9 @@ export default function Consejo({
 
   return (
     <section className="rounded-3xl border border-borde bg-tarjeta p-4 md:p-5">
-      <h2 className="font-display text-2xl font-bold leading-tight">{titulo}</h2>
+      {encabezado}
       {subtitulo && <p className="text-base text-texto-suave">{subtitulo}</p>}
+      {aviso}
       {children}
 
       {/* Semáforo */}
@@ -163,6 +180,8 @@ export default function Consejo({
           </ul>
         </div>
       )}
+
+      {pie}
 
       <Link href="/ayuda" className="mt-4 inline-block text-base font-bold text-acento underline underline-offset-4">
         {t("masInfo")}
