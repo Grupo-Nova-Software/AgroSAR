@@ -3,6 +3,8 @@
 import { useIdioma, type Idioma, type Texto } from "../idioma";
 
 const T = {
+  ahora: { es: "Ahora", en: "Now" },
+  capaVientoVivo: { es: "Viento en movimiento", en: "Moving wind" },
   titulo: { es: "Clima para tu chacra", en: "Weather for your field" },
   zona: { es: "Zona", en: "Zone" },
   cultivo: { es: "Cultivo", en: "Crop" },

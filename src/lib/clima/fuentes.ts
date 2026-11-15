@@ -203,7 +203,7 @@ export async function descargarGrilla(claveHora: string): Promise<GrillaCruda> {
   url.search = new URLSearchParams({
     latitude: lats.join(","),
     longitude: lons.join(","),
-    hourly: "temperature_2m,relative_humidity_2m,dew_point_2m,precipitation,wind_speed_10m,wind_gusts_10m,et0_fao_evapotranspiration,shortwave_radiation",
+    hourly: "temperature_2m,relative_humidity_2m,dew_point_2m,precipitation,wind_speed_10m,wind_gusts_10m,wind_direction_10m,et0_fao_evapotranspiration,shortwave_radiation",
     daily: "temperature_2m_max,temperature_2m_min,precipitation_sum,et0_fao_evapotranspiration,wind_speed_10m_max",
     timezone: ZONA_HORARIA,
     forecast_days: "14",
@@ -245,6 +245,7 @@ export async function descargarGrilla(claveHora: string): Promise<GrillaCruda> {
       rocio_c: campoH("dew_point_2m", "instante"),
       viento_kmh: campoH("wind_speed_10m", "instante"),
       rafaga_kmh: campoH("wind_gusts_10m", "instante"),
+      dir_grados: campoH("wind_direction_10m", "instante"),
       hr_pct: campoH("relative_humidity_2m", "instante"),
       rad_wm2: campoH("shortwave_radiation", "instante"),
       et0_mm: campoH("et0_fao_evapotranspiration", "suma"),

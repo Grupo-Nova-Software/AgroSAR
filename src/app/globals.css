@@ -197,3 +197,8 @@ body {
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
 }
+
+/* Vista aérea: un poco más de color y contraste para que los lotes y caminos se distingan mejor */
+.leaflet-layer.vista-aerea {
+  filter: saturate(1.18) contrast(1.07);
+}

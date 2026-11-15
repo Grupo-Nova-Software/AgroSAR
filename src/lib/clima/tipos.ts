@@ -283,6 +283,8 @@ export interface CamposHorarios {
   rocio_c: number[][];
   viento_kmh: number[][];
   rafaga_kmh: number[][];
+  /** De dónde viene el viento, en grados (0 = norte). Opcional: respuestas guardadas viejas no lo traen. */
+  dir_grados?: number[][];
   hr_pct: number[][];
   rad_wm2: number[][];
   et0_mm: number[][]; // suma de las 3 h del paso

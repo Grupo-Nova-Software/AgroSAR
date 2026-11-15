@@ -11,14 +11,14 @@ import type { ImageOverlay, LayerGroup, Map as LMap, Marker, TileLayer } from "l
 import type { SerieHumedad } from "@/types/contratos";
 import type { GrillaClima, RespuestaClima } from "@/lib/clima/tipos";
 import { CAPAS, cssColor, degradado, ESCALAS, interpolar, pintarCapa, posicionEnEscala, prepararCampos, type CapaId, type Modo } from "./escalas";
+import { useChacras } from "../chacras";
+import { capaAerea, ESRI_NOMBRES } from "../mapaBase";
 import { useClimaTextos, type ClaveClima } from "./textos";
+import { animarViento } from "./viento";
 
-const ESRI_SAT = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
-const ESRI_NOMBRES = "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}";
 const VACIO = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
-const CLAVE_CHACRA = "agrosar.chacra";
 
-type Apoyo = "limites" | "chacra" | "nisar" | "nodos" | "nombres";
+type Apoyo = "limites" | "chacra" | "nisar" | "nodos" | "nombres" | "viento";
 interface IndiceMapa { bbox: [number, number, number, number]; fechas: string[] }
 
 const token = (nombre: string) => getComputedStyle(document.documentElement).getPropertyValue(nombre).trim();
@@ -48,15 +48,16 @@ export default function MapaClima({
   const capas = useRef<{ zonas: LayerGroup; chacra: LayerGroup; nisar: LayerGroup; nodos: LayerGroup; nombres: TileLayer; clima: ImageOverlay } | null>(null);
   const pin = useRef<Marker | null>(null);
   const lienzo = useRef<HTMLCanvasElement | null>(null);
+  const lienzoViento = useRef<HTMLCanvasElement>(null);
   const [listo, setListo] = useState(false);
 
   const [capa, setCapa] = useState<CapaId>("lluvia");
   const [modo, setModo] = useState<Modo>("h");
   const [paso, setPaso] = useState(0);
   const [reproduciendo, setReproduciendo] = useState(false);
-  const [apoyo, setApoyo] = useState<Record<Apoyo, boolean>>({ limites: true, chacra: true, nisar: false, nodos: true, nombres: true });
+  const [apoyo, setApoyo] = useState<Record<Apoyo, boolean>>({ limites: true, chacra: true, nisar: false, nodos: true, nombres: true, viento: true });
   const [panel, setPanel] = useState(false);
-  const [chacra, setChacra] = useState<[number, number][] | null>(null);
+  const { chacras } = useChacras();
   const [indiceNisar, setIndiceNisar] = useState<IndiceMapa | null>(null);
 
   const vivo = useRef({ alElegirPunto });
@@ -72,14 +73,6 @@ export default function MapaClima({
   const momento = grilla ? (modo === "h" ? grilla.horas[pasoActual] : grilla.dias[pasoActual]) : null;
   const rotuloMomento = (m: string) => (m.length > 10 ? `${diaCorto(m)} · ${m.slice(11, 16)}` : diaCorto(m));
 
-  // Chacra guardada en «Mi suelo»
-  useEffect(() => {
-    try {
-      const v = JSON.parse(localStorage.getItem(CLAVE_CHACRA) ?? "null");
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorage solo existe en el navegador
-      if (Array.isArray(v) && v.length >= 3) setChacra(v);
-    } catch {}
-  }, []);
   // La imagen NISAR por fecha se busca recién al encender la capa (puede no estar publicada todavía).
   useEffect(() => {
     if (!apoyo.nisar || indiceNisar) return;
@@ -99,11 +92,11 @@ export default function MapaClima({
       const m = L.map(contenedor.current, { maxZoom: 19, zoomControl: true });
       m.createPane("clima").style.zIndex = "350";
       m.getPane("clima")!.style.pointerEvents = "none";
-      L.tileLayer(ESRI_SAT, { maxNativeZoom: 18, maxZoom: 19, attribution: "Esri, Maxar, Earthstar Geographics" }).addTo(m);
+      capaAerea(L, m).addTo(m);
       L.control.scale({ imperial: false, position: "bottomleft" }).addTo(m);
       capas.current = {
         clima: L.imageOverlay(VACIO, [[-27.61, -57.05], [-26.09, -54.64]], { opacity: 0.72, pane: "clima", attribution: "Open-Meteo (CC BY 4.0)" }).addTo(m),
-        nombres: L.tileLayer(ESRI_NOMBRES, { maxNativeZoom: 18, maxZoom: 19, pane: "overlayPane" }),
+        nombres: L.tileLayer(ESRI_NOMBRES, { maxNativeZoom: 17, maxZoom: 19, crossOrigin: true, updateWhenIdle: true, keepBuffer: 1, pane: "overlayPane" }),
         zonas: L.layerGroup().addTo(m),
         nisar: L.layerGroup().addTo(m),
         chacra: L.layerGroup().addTo(m),
@@ -162,9 +155,23 @@ export default function MapaClima({
     const c = capas.current;
     if (!listo || !L || !c) return;
     c.chacra.clearLayers();
-    if (!apoyo.chacra || !chacra) return;
-    L.polygon(chacra.map(([lon, lat]) => [lat, lon] as [number, number]), { color: "#ffffff", weight: 4, fillColor: token("--primario") || "#287d45", fillOpacity: 0.15, interactive: false }).addTo(c.chacra);
-  }, [listo, apoyo.chacra, chacra]);
+    if (!apoyo.chacra) return;
+    for (const ch of chacras)
+      L.polygon(ch.vertices.map(([lon, lat]) => [lat, lon] as [number, number]), { color: ch.color, weight: 4, fillColor: ch.color, fillOpacity: 0.15, interactive: false })
+        .bindTooltip(ch.nombre, { permanent: true, direction: "center", className: "etiqueta-chacra" })
+        .addTo(c.chacra);
+  }, [listo, apoyo.chacra, chacras]);
+
+  // ---------- Viento en movimiento (rayitas que siguen al viento del momento elegido) ----------
+  const hayViento = modo === "h" && !!grilla?.h.dir_grados;
+  useEffect(() => {
+    const m = mapa.current;
+    const cv = lienzoViento.current;
+    const dir = grilla?.h.dir_grados?.[pasoActual];
+    const vel = grilla?.h.viento_kmh[pasoActual];
+    if (!listo || !m || !cv || !grilla || !apoyo.viento || modo !== "h" || !dir || !vel) return;
+    return animarViento(m, cv, grilla, vel, dir);
+  }, [listo, grilla, apoyo.viento, modo, pasoActual]);
 
   // ---------- Radar NISAR: imagen de la última pasada (si existe) + valor medio de cada zona ----------
   useEffect(() => {
@@ -294,7 +301,8 @@ export default function MapaClima({
   };
   const apoyos: { id: Apoyo; clave: ClaveClima; deshabilitado?: boolean }[] = [
     { id: "limites", clave: "capaLimites" },
-    { id: "chacra", clave: chacra ? "capaChacra" : "capaChacraSin", deshabilitado: !chacra },
+    { id: "chacra", clave: chacras.length ? "capaChacra" : "capaChacraSin", deshabilitado: !chacras.length },
+    { id: "viento", clave: "capaVientoVivo", deshabilitado: !hayViento },
     { id: "nisar", clave: "capaNisar" },
     { id: "nodos", clave: "capaNodos" },
     { id: "nombres", clave: "capaNombres" },
@@ -309,6 +317,8 @@ export default function MapaClima({
       <div className="relative">
         {/* El div que maneja Leaflet: clases fijas, nunca cambian */}
         <div ref={contenedor} className="h-[68svh] min-h-[26rem] w-full md:h-[36rem] md:rounded-t-3xl" aria-label={tc("mapaTitulo")} />
+        {/* Viento en movimiento: se dibuja encima del mapa y no recibe toques */}
+        <canvas ref={lienzoViento} aria-hidden className={`pointer-events-none absolute inset-0 z-[1000] h-full w-full ${apoyo.viento && hayViento ? "" : "hidden"}`} />
 
         {/* Capas de apoyo (izquierda, plegable) */}
         <div className="absolute left-14 top-3 z-[1100]">
@@ -422,7 +432,7 @@ export default function MapaClima({
             ))}
           </div>
           <p className="ml-auto text-lg font-bold text-texto" aria-live="polite">
-            {momento ? rotuloMomento(momento) : "–"}
+            {momento ? (modo === "h" && pasoActual === 0 ? `${tc("ahora")} · ${momento.slice(11, 16)}` : rotuloMomento(momento)) : "–"}
           </p>
         </div>
         <input

@@ -1,25 +1,23 @@
 "use client";
-// Pantalla "Clima": respuestas rápidas para el agricultor, mapa del clima sobre la vista aérea, hora por hora,
-// balance de agua (NASA POWER + radar NISAR) y los próximos meses de la campaña.
-// Datos: GET /api/clima (punto o zona) y GET /api/clima/mapa (grilla para las capas). Rol Backend: src/lib/clima.
+// Pantalla "Clima". Primero lo simple: ahora, hoy, mañana, qué conviene hacer y los próximos días.
+// El botón «Ver datos avanzados» abre el mapa del clima, hora por hora, balance de agua y la campaña.
+// Se puede ver el clima de cada chacra guardada (en su ubicación exacta) o de una zona.
+// Datos: GET /api/clima (punto o zona). Rol Backend: src/lib/clima.
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { IndiceHumedad, SerieHumedad } from "@/types/contratos";
-import type { GrillaClima, RespuestaClima } from "@/lib/clima/tipos";
-import BalanceHidrico from "./clima/BalanceHidrico";
-import DetalleHorario from "./clima/DetalleHorario";
-import Perspectiva from "./clima/Perspectiva";
-import Tarjetas from "./clima/Tarjetas";
+import type { RespuestaClima } from "@/lib/clima/tipos";
+import { useChacras } from "./chacras";
+import ClimaSimple from "./clima/ClimaSimple";
 import { useClimaTextos } from "./clima/textos";
 import { CULTIVOS } from "./cultivos";
-import type { Idioma } from "./idioma";
 import Marco from "./Marco";
 
-// Leaflet usa `window`: el mapa se carga solo en el navegador.
-const MapaClima = dynamic(() => import("./clima/MapaClima"), {
+// Lo avanzado (mapa incluido) se descarga recién cuando se pide.
+const ClimaAvanzado = dynamic(() => import("./clima/ClimaAvanzado"), {
   ssr: false,
-  loading: () => <div className="h-[68svh] min-h-[26rem] w-full animate-pulse bg-tarjeta-2 md:h-[36rem] md:rounded-3xl" />,
+  loading: () => <div className="mx-3 h-64 animate-pulse rounded-3xl bg-tarjeta-2 md:mx-8" />,
 });
 
 const FUENTES_UI: Record<"nasa_power" | "open_meteo" | "climatologia", string> = {
@@ -27,27 +25,39 @@ const FUENTES_UI: Record<"nasa_power" | "open_meteo" | "climatologia", string> =
   open_meteo: "Open-Meteo",
   climatologia: "NASA POWER (climatology)",
 };
+const CLAVE_AVANZADO = "agrosar.clima.avanzado";
 
 export default function VistaClima({ cultivo: cultivoParam, area: areaParam }: { cultivo?: string; area?: string }) {
-  const { tc, idioma, setIdioma, fecha } = useClimaTextos();
+  const { tc, idioma } = useClimaTextos();
+  const es = idioma === "es";
   const router = useRouter();
-  const cultivo = (CULTIVOS.find((c) => c.id === cultivoParam) ?? CULTIVOS[0]).id;
+  const { chacras, cargadas } = useChacras();
 
   const [areas, setAreas] = useState<SerieHumedad[]>([]);
-  const [punto, setPunto] = useState<{ lat: number; lon: number } | null>(null);
+  /** "chacra:<id>" · "zona:<id>" · "punto" (tocado en el mapa avanzado) · null = todavía sin elegir */
+  const [lugar, setLugar] = useState<string | null>(areaParam ? `zona:${areaParam}` : null);
+  const [puntoMapa, setPuntoMapa] = useState<{ lat: number; lon: number } | null>(null);
   const [resultado, setResultado] = useState<{ clave: string; datos: RespuestaClima } | null>(null);
   const [fallo, setFallo] = useState<string | null>(null); // clave de la consulta que falló
   const [intento, setIntento] = useState(0);
-  const [grilla, setGrilla] = useState<GrillaClima | null>(null);
-  const [errorGrilla, setErrorGrilla] = useState(false);
-  const areaId = (areaParam && areas.some((a) => a.id === areaParam) ? areaParam : areas[0]?.id) ?? "";
+  const [avanzado, setAvanzado] = useState(false);
+  const refAvanzado = useRef<HTMLDivElement>(null);
 
-  const irA = (cambios: { cultivo?: string; area?: string }) => {
-    const p = new URLSearchParams({ cultivo, ...(areaId ? { area: areaId } : {}), ...cambios });
-    router.replace(`/clima?${p.toString()}`, { scroll: false });
-  };
+  // Lugar por defecto: la primera chacra guardada; si no hay, la primera zona
+  const lugarActual = lugar ?? (cargadas ? (chacras[0] ? `chacra:${chacras[0].id}` : areas[0] ? `zona:${areas[0].id}` : null) : null);
+  const chacra = lugarActual?.startsWith("chacra:") ? chacras.find((c) => `chacra:${c.id}` === lugarActual) : undefined;
+  const zonaElegida = lugarActual?.startsWith("zona:") ? lugarActual.slice(5) : "";
+  const areaId = (areas.some((a) => a.id === zonaElegida) ? zonaElegida : areas[0]?.id) ?? "";
+  const cultivo = chacra?.cultivo ?? (CULTIVOS.find((c) => c.id === cultivoParam) ?? CULTIVOS[0]).id;
+  const punto = chacra
+    ? {
+        lat: Number((chacra.vertices.reduce((s, v) => s + v[1], 0) / chacra.vertices.length).toFixed(4)),
+        lon: Number((chacra.vertices.reduce((s, v) => s + v[0], 0) / chacra.vertices.length).toFixed(4)),
+      }
+    : lugarActual === "punto"
+      ? puntoMapa
+      : null;
 
-  // Zonas con su serie NISAR (una vez) y grilla del mapa
   useEffect(() => {
     (async () => {
       try {
@@ -57,16 +67,16 @@ export default function VistaClima({ cultivo: cultivoParam, area: areaParam }: {
         setFallo("zonas");
       }
     })();
-    fetch("/api/clima/mapa")
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
-      .then(setGrilla)
-      .catch(() => setErrorGrilla(true));
+    try {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorage solo existe en el navegador
+      if (localStorage.getItem(CLAVE_AVANZADO) === "1") setAvanzado(true);
+    } catch {}
   }, []);
 
-  // Clima del punto elegido o del centro de la zona
-  const clave = punto ? `${punto.lat},${punto.lon}|${cultivo}` : `${areaId}|${cultivo}`;
+  // Clima del punto (chacra o toque en el mapa) o del centro de la zona
+  const clave = !lugarActual ? "" : punto ? `${punto.lat},${punto.lon}|${cultivo}` : areaId ? `${areaId}|${cultivo}` : "";
   useEffect(() => {
-    if (!areaId && !punto) return;
+    if (!clave) return;
     let vigente = true;
     const q = new URLSearchParams({ cultivo });
     if (punto) {
@@ -84,79 +94,74 @@ export default function VistaClima({ cultivo: cultivoParam, area: areaParam }: {
     return () => {
       vigente = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- `clave` resume zona, punto y cultivo
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `clave` resume lugar y cultivo
   }, [clave, intento]);
 
-  const elegirPunto = useCallback((lat: number, lon: number) => setPunto({ lat, lon }), []);
+  const elegirPunto = useCallback((lat: number, lon: number) => {
+    setPuntoMapa({ lat, lon });
+    setLugar("punto");
+  }, []);
+  const cambiarLugar = (v: string) => {
+    setLugar(v);
+    if (v.startsWith("zona:")) router.replace(`/clima?${new URLSearchParams({ cultivo, area: v.slice(5) }).toString()}`, { scroll: false });
+  };
+  const alternarAvanzado = () => {
+    const nuevo = !avanzado;
+    setAvanzado(nuevo);
+    try {
+      localStorage.setItem(CLAVE_AVANZADO, nuevo ? "1" : "0");
+    } catch {}
+    if (nuevo) window.setTimeout(() => refAvanzado.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 150);
+  };
+
   const datos = resultado?.datos ?? null;
-  const cargando = resultado?.clave !== clave && fallo !== clave;
+  const cargando = !!clave && resultado?.clave !== clave && fallo !== clave;
   const caidas = datos ? (Object.keys(FUENTES_UI) as (keyof typeof FUENTES_UI)[]).filter((f) => !datos.estado_fuentes[f].ok) : [];
-  const control = "h-12 rounded-2xl border-2 border-borde bg-fondo px-3 text-base font-bold text-texto";
+  const control = "h-14 w-full rounded-2xl border-2 border-borde bg-fondo px-3 text-lg font-bold text-texto";
 
   return (
-    <Marco variante="compacta">
+    <Marco variante="compacta" cultivo={cultivo}>
       <div className="space-y-4 px-3 md:px-8">
-        {/* Zona, cultivo e idioma */}
-        <header className="rounded-3xl border border-borde bg-tarjeta p-4">
-          <h1 className="font-display text-3xl font-bold leading-tight">{tc("titulo")}</h1>
-          <div className="mt-3 flex flex-wrap items-end gap-3">
-            <label className="flex min-w-[12rem] flex-1 flex-col gap-1 text-sm font-bold text-texto-suave">
-              {tc("zona")}
+        <header>
+          <h1 className="font-display text-3xl font-bold leading-tight">{es ? "El clima en tu chacra" : "Weather on your field"}</h1>
+          <label className="mt-2 flex flex-col gap-1 text-base font-bold text-texto-suave">
+            {es ? "¿Dónde?" : "Where?"}
+            <select className={control} value={lugarActual ?? ""} onChange={(e) => cambiarLugar(e.target.value)}>
+              {chacras.length > 0 && (
+                <optgroup label={es ? "Mis chacras" : "My fields"}>
+                  {chacras.map((c) => (
+                    <option key={c.id} value={`chacra:${c.id}`}>🌾 {c.nombre}</option>
+                  ))}
+                </optgroup>
+              )}
+              <optgroup label={es ? "Zonas" : "Zones"}>
+                {areas.map((a) => (
+                  <option key={a.id} value={`zona:${a.id}`}>{a.zona}</option>
+                ))}
+              </optgroup>
+              {puntoMapa && <option value="punto">📍 {es ? "Punto elegido en el mapa" : "Point picked on the map"}</option>}
+            </select>
+          </label>
+          {!chacra && (
+            <label className="mt-2 flex flex-col gap-1 text-base font-bold text-texto-suave">
+              {tc("cultivo")}
               <select
                 className={control}
-                value={areaId}
-                onChange={(e) => {
-                  setPunto(null);
-                  irA({ area: e.target.value });
-                }}
+                value={cultivo}
+                onChange={(e) => router.replace(`/clima?${new URLSearchParams({ cultivo: e.target.value, ...(areaId ? { area: areaId } : {}) }).toString()}`, { scroll: false })}
               >
-                {areas.map((a) => (
-                  <option key={a.id} value={a.id}>{a.zona}</option>
-                ))}
-              </select>
-            </label>
-            <label className="flex min-w-[9rem] flex-1 flex-col gap-1 text-sm font-bold text-texto-suave">
-              {tc("cultivo")}
-              <select className={control} value={cultivo} onChange={(e) => irA({ cultivo: e.target.value })}>
                 {CULTIVOS.map((c) => (
                   <option key={c.id} value={c.id}>{c.nombre[idioma]}</option>
                 ))}
               </select>
             </label>
-            <div role="group" aria-label={tc("idioma")} className="flex h-12 rounded-2xl border-2 border-borde p-1">
-              {(["en", "es"] as Idioma[]).map((i) => (
-                <button
-                  key={i}
-                  type="button"
-                  aria-pressed={idioma === i}
-                  onClick={() => setIdioma(i)}
-                  className={`rounded-xl px-4 text-base font-bold uppercase ${idioma === i ? "bg-primario text-sobre-primario" : "text-texto-suave"}`}
-                >
-                  {i}
-                </button>
-              ))}
-            </div>
-          </div>
-          <p className="mt-3 text-sm leading-snug text-texto-suave">{tc("contexto")}</p>
-          {datos && (
-            <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm font-bold text-texto">
-              📍{" "}
-              {datos.punto.origen === "coordenada"
-                ? tc("puntoElegido", { lat: datos.punto.lat.toFixed(2), lon: datos.punto.lon.toFixed(2) })
-                : tc("puntoZona", { zona: datos.punto.zona ?? "" })}
-              {punto && (
-                <button type="button" onClick={() => setPunto(null)} className="rounded-full border border-borde px-3 py-1 text-sm font-bold text-acento">
-                  {tc("volverZona")}
-                </button>
-              )}
-            </p>
           )}
         </header>
 
-        {fallo === clave && (
+        {fallo === clave && clave && (
           <div role="alert" className="rounded-3xl border-2 border-peligro bg-tarjeta p-4 text-base font-bold">
             <p>{tc("errorClima")}</p>
-            <button type="button" onClick={() => setIntento((v) => v + 1)} className="mt-2 h-11 rounded-full bg-primario px-5 font-bold text-sobre-primario">
+            <button type="button" onClick={() => setIntento((v) => v + 1)} className="mt-2 h-12 rounded-full bg-primario px-5 font-bold text-sobre-primario">
               {tc("reintentar")}
             </button>
           </div>
@@ -168,48 +173,32 @@ export default function VistaClima({ cultivo: cultivoParam, area: areaParam }: {
         ))}
 
         <div aria-busy={cargando} className={cargando && datos ? "opacity-60 transition-opacity" : "transition-opacity"}>
-          {datos ? <Tarjetas datos={datos} /> : fallo !== clave && <p className="rounded-3xl bg-tarjeta p-6 text-center text-lg text-texto-suave">{tc("cargando")}</p>}
+          {datos ? <ClimaSimple datos={datos} /> : fallo !== clave && <p className="rounded-3xl bg-tarjeta p-6 text-center text-lg text-texto-suave">{tc("cargando")}</p>}
         </div>
+
+        {datos && (
+          <>
+            <button
+              type="button"
+              onClick={alternarAvanzado}
+              aria-expanded={avanzado}
+              className="flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl border-2 border-primario bg-tarjeta px-4 text-lg font-bold text-acento"
+            >
+              <span aria-hidden>{avanzado ? "▲" : "🗺️"}</span>
+              {avanzado ? (es ? "Ocultar datos avanzados" : "Hide advanced data") : es ? "Ver datos avanzados y mapa del clima" : "Show advanced data and weather map"}
+            </button>
+            <p className="text-sm leading-snug text-texto-suave">
+              {es
+                ? "Pronóstico: Open-Meteo (modelo; no es dato de NASA). Lluvia de los últimos días: NASA POWER. Agua del suelo: radar NISAR (NASA-ISRO)."
+                : "Forecast: Open-Meteo (model; not NASA data). Recent rain: NASA POWER. Soil water: NISAR radar (NASA-ISRO)."}
+            </p>
+          </>
+        )}
       </div>
 
-      {/* El mapa ocupa todo el ancho en el celular */}
-      <section className="mt-4 md:px-8" aria-label={tc("mapaTitulo")}>
-        <MapaClima grilla={grilla} errorGrilla={errorGrilla} areas={areas} areaId={areaId} datos={datos} punto={punto} alElegirPunto={elegirPunto} />
-      </section>
-
-      {datos && (
-        <div className="mt-4 space-y-4 px-3 md:px-8">
-          <DetalleHorario datos={datos} />
-          <BalanceHidrico datos={datos} />
-          <Perspectiva datos={datos} />
-
-          <section className="rounded-3xl border border-borde bg-tarjeta p-4">
-            <h2 className="font-display text-2xl font-bold">{tc("nodosTitulo")}</h2>
-            <p className="mt-1 text-base leading-snug">{tc("nodosTexto")}</p>
-            {grilla && (
-              <ul className="mt-2 flex flex-wrap gap-2 text-sm">
-                {grilla.nodos.map((nodo) => (
-                  <li key={nodo.id} className="rounded-full border border-borde bg-fondo px-3 py-1">
-                    {nodo.nombre} <span className="text-texto-suave">({nodo.lat.toFixed(2)}, {nodo.lon.toFixed(2)})</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-
-          <footer className="rounded-3xl border border-borde bg-tarjeta p-4 text-sm leading-relaxed text-texto-suave">
-            <h2 className="text-base font-bold text-texto">{tc("fuentesTitulo")}</h2>
-            <ul className="mt-1 list-disc space-y-0.5 pl-5">
-              {datos.fuentes.map((f) => (
-                <li key={f}>{f}</li>
-              ))}
-              <li>{tc("fuenteMapa")}</li>
-            </ul>
-            {datos.estado_fuentes.nasa_power.hasta && <p className="mt-2">{tc("powerHasta", { dia: fecha(datos.estado_fuentes.nasa_power.hasta, true) })}</p>}
-            <p className="mt-2 font-bold text-texto">{tc("aviso")}</p>
-          </footer>
-        </div>
-      )}
+      <div ref={refAvanzado} className="mt-4 scroll-mt-20">
+        {avanzado && datos && <ClimaAvanzado datos={datos} areas={areas} areaId={areaId} punto={punto} alElegirPunto={elegirPunto} />}
+      </div>
     </Marco>
   );
 }

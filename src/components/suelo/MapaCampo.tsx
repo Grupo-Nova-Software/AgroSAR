@@ -13,10 +13,11 @@ import type { Circle, ImageOverlay, LayerGroup, Map as LMap, Marker, Rectangle }
 import type { EstadoRecomendacion, SerieHumedad } from "@/types/contratos";
 import { guardarUbicacion, leerUltimaUbicacion, type Chacra } from "../chacras";
 import { useIdioma } from "../idioma";
+import { capaAerea, ESRI_NOMBRES } from "../mapaBase";
 import { hectareasDe, insertarEsquina, type LonLat } from "./api";
 
-const ESRI_SAT = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
-const ESRI_NOMBRES = "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}";
+// De cerca, el color del agua va más suave para que se vea bien la chacra en la imagen aérea.
+const opacidadHumedad = (zoom: number) => (zoom >= 16 ? 0.38 : zoom >= 14 ? 0.5 : 0.62);
 const OSM = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
 
 const colorDe = (token: string) => getComputedStyle(document.documentElement).getPropertyValue(token).trim() || "#287d45";
@@ -92,11 +93,12 @@ export default function MapaCampo({
       const m = L.map(contenedor.current, { maxZoom: 19, zoomControl: false });
       m.createPane("humedad").style.zIndex = "350";
       L.control.zoom({ position: "bottomright" }).addTo(m);
+      m.on("zoomend", () => capaHumedad.current?.setOpacity(opacidadHumedad(m.getZoom())));
 
       // crossOrigin: las teselas se piden con CORS, así el service worker puede guardarlas para usar sin internet
-      const satelite = L.tileLayer(ESRI_SAT, { maxNativeZoom: 18, maxZoom: 19, crossOrigin: true, attribution: "Esri, Maxar, Earthstar Geographics" }).addTo(m);
-      const calles = L.tileLayer(OSM, { maxZoom: 19, crossOrigin: true, attribution: "&copy; OpenStreetMap" });
-      const nombres = L.tileLayer(ESRI_NOMBRES, { maxNativeZoom: 18, maxZoom: 19, crossOrigin: true, pane: "overlayPane" }).addTo(m);
+      const satelite = capaAerea(L, m).addTo(m);
+      const calles = L.tileLayer(OSM, { maxZoom: 19, crossOrigin: true, updateWhenIdle: true, keepBuffer: 1, attribution: "&copy; OpenStreetMap" });
+      const nombres = L.tileLayer(ESRI_NOMBRES, { maxNativeZoom: 17, maxZoom: 19, crossOrigin: true, updateWhenIdle: true, keepBuffer: 1, pane: "overlayPane" }).addTo(m);
       L.control.layers({ [t("capaSatelite")]: satelite, [t("capaCalles")]: calles }, { [t("capaNombres")]: nombres }, { position: "topright" }).addTo(m);
       L.control.scale({ imperial: false, position: "bottomleft" }).addTo(m);
 
@@ -259,7 +261,7 @@ export default function MapaCampo({
     if (capaHumedad.current) capaHumedad.current.setUrl(url);
     else {
       const [lo1, la1, lo2, la2] = indice.bbox;
-      capaHumedad.current = L.imageOverlay(url, [[la1, lo1], [la2, lo2]], { opacity: 0.62, pane: "humedad", attribution: "NISAR (NASA-ISRO)" }).addTo(m);
+      capaHumedad.current = L.imageOverlay(url, [[la1, lo1], [la2, lo2]], { opacity: opacidadHumedad(m.getZoom()), pane: "humedad", attribution: "NISAR (NASA-ISRO)" }).addTo(m);
     }
   }, [listo, verHumedad, dibujando, indice, fechaSel]);
 
