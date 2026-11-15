@@ -6,12 +6,12 @@ import type { ReactNode, SVGProps } from "react";
 
 const TRAZOS = {
   satelite: (
-    <>
-      <path d="M12 8.500 15.500 12 12 15.500 8.500 12 12 8.500Z" />
-      <path d="m9.800 9.800-1.600-1.600M14.200 14.200l1.600 1.600" />
-      <path d="M6.800 3.500 9.500 6.200 6.200 9.500 3.500 6.800l3.300-3.300ZM17.800 14.500l2.700 2.700-3.300 3.300-2.700-2.700 3.300-3.300Z" />
-      <path d="M4 15.500A4.500 4.500 0 0 0 8.500 20" />
-    </>
+    <g transform="rotate(-45 12 12)">
+      <rect x="9.5" y="9" width="5" height="6" rx="1" />
+      <rect x="2.5" y="9.5" width="5" height="5" rx=".6" />
+      <rect x="16.5" y="9.5" width="5" height="5" rx=".6" />
+      <path d="M7.5 12h2M14.5 12h2M12 9V6.500M10.500 5.500a2 2 0 0 1 3 0" />
+    </g>
   ),
   calendario: (
     <>
@@ -52,8 +52,9 @@ const TRAZOS = {
   derecha: <path d="m9 5 7 7-7 7" />,
   pulverizar: (
     <>
-      <path d="M3.500 9.500h9l2.500 2.500h5.500M12.500 9.500V6.500H7v3" />
-      <path d="M15 15.500v1.500M18 15v2.500M21 15.500v1.500M16.500 19v1.500M19.500 19.500V21" />
+      <path d="M6 10.500a1.500 1.500 0 0 1 1.500-1.500h5A1.500 1.500 0 0 1 14 10.500v8.500a1.500 1.500 0 0 1-1.500 1.500h-5A1.500 1.500 0 0 1 6 19v-8.500Z" />
+      <path d="M8 9V6.500h4V9M12 6.500h4.500l1.500-1.500" />
+      <path d="M20.500 6.500h.010M21 9.500h.010M18.500 8h.010" strokeWidth="2.200" />
     </>
   ),
   termometro: (
@@ -106,13 +107,13 @@ export default function Icono({ nombre, className = "h-5 w-5", ...resto }: { nom
   );
 }
 
-// ---------- Dibujos del diseñador (public/dibujos/*.svg, ver scripts/vectorizar_dibujos.py) ----------
+// ---------- Dibujos ilustrados (public/dibujos/*.svg, generados con scripts/dibujar_iconos.py a partir de los bocetos del diseñador) ----------
 export type NombreDibujo =
-  | "brote" | "suelo-seco" | "suelo-bueno" | "suelo-mojado" | "clima-sol" | "clima-parcial" | "clima-nube" | "clima-lluvia" | "clima-tormenta"
-  | "cultivo-maiz" | "cultivo-soja" | "cultivo-mandioca" | "cultivo-espiga" | "pasto" | "arbusto"
-  | "nav-inicio" | "nav-suelo" | "nav-chacras" | "nav-clima";
+  | "brote" | "campo" | "suelo-seco" | "suelo-bueno" | "suelo-mojado"
+  | "clima-sol" | "clima-parcial" | "clima-nube" | "clima-lluvia" | "clima-tormenta"
+  | "cultivo-maiz" | "cultivo-soja" | "cultivo-mandioca";
 
-/** Un dibujo del diseñador. Son SVG livianos; `unoptimized` porque no hace falta pasarlos por el optimizador de imágenes. */
+/** Un dibujo ilustrado. Son SVG livianos; `unoptimized` porque no hace falta pasarlos por el optimizador de imágenes. */
 export function Dibujo({ nombre, className = "h-12 w-12", alto = 96 }: { nombre: NombreDibujo; className?: string; alto?: number }) {
   return <Image src={`/dibujos/${nombre}.svg`} alt="" width={alto} height={alto} unoptimized aria-hidden className={`inline-block shrink-0 object-contain ${className}`} />;
 }
@@ -124,6 +125,5 @@ const DIBUJO_CLIMA: Record<TipoClima, NombreDibujo> = {
 };
 
 export function IconoClima({ tipo, className = "h-12 w-12" }: { tipo: TipoClima; className?: string }) {
-  // el contorno suave hace que la nube blanca se vea sobre una tarjeta blanca
-  return <Dibujo nombre={DIBUJO_CLIMA[tipo]} className={`${className} [filter:drop-shadow(0_0_1px_rgba(40,60,50,0.7))]`} />;
+  return <Dibujo nombre={DIBUJO_CLIMA[tipo]} className={className} />;
 }

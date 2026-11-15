@@ -1,7 +1,6 @@
 "use client";
 // "Mis chacras": todas las chacras del agricultor de un vistazo, con su semáforo y el agua del suelo.
 // Funciona sin internet con el último resultado guardado en el teléfono.
-import Image from "next/image";
 import Link from "next/link";
 import { useChacras, type Chacra } from "./chacras";
 import { CULTIVOS } from "./cultivos";
@@ -96,7 +95,7 @@ export default function VistaChacras() {
                           <span className="truncate">{c.nombre}</span>
                         </p>
                         <p className="mt-0.5 flex items-center gap-1.5 text-base text-texto-suave">
-                          <Image src={cultivo.imagen} alt="" width={22} height={22} className="h-[22px] w-[22px] rounded-full object-cover" />
+                          <Dibujo nombre={`cultivo-${c.cultivo}`} className="h-6 w-6" />
                           {tr(cultivo.nombre)} · {num(hectareasDe(c.vertices))} {t("ha")}
                         </p>
                         {r ? (

@@ -49,10 +49,10 @@ function Icono({ children, className = "h-6 w-6" }: { children: ReactNode; class
 }
 
 const PESTANAS: { href: string; clave: Clave; icono: ReactNode; dibujo: NombreDibujo }[] = [
-  { href: "/", clave: "navCultivos", icono: ICONOS.inicio, dibujo: "nav-inicio" },
-  { href: "/suelo", clave: "navSuelo", icono: ICONOS.suelo, dibujo: "nav-suelo" },
-  { href: "/chacras", clave: "navChacras", icono: ICONOS.chacras, dibujo: "nav-chacras" },
-  { href: "/clima", clave: "navClima", icono: ICONOS.clima, dibujo: "nav-clima" },
+  { href: "/", clave: "navCultivos", icono: ICONOS.inicio, dibujo: "brote" },
+  { href: "/suelo", clave: "navSuelo", icono: ICONOS.suelo, dibujo: "suelo-bueno" },
+  { href: "/chacras", clave: "navChacras", icono: ICONOS.chacras, dibujo: "campo" },
+  { href: "/clima", clave: "navClima", icono: ICONOS.clima, dibujo: "clima-parcial" },
 ];
 
 export default function Marco({
@@ -147,7 +147,7 @@ function BarraPestanas() {
                 }`}
               >
                 {/* Dibujo del diseñador: a color en la pestaña activa, apagado en las demás */}
-                <Dibujo nombre={p.dibujo} className={`h-8 w-8 transition-[filter,opacity,transform] ${activa ? "scale-110 drop-shadow-sm" : "opacity-75 grayscale"}`} />
+                <Dibujo nombre={p.dibujo} className={`h-8 w-8 transition-[filter,opacity,transform] ${activa ? "scale-110" : "opacity-70 grayscale"}`} />
                 {t(p.clave)}
               </Link>
             </li>

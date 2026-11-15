@@ -1,10 +1,9 @@
 "use client";
 // Datos propios de una chacra: nombre, color distintivo, qué se siembra y borrar.
-import Image from "next/image";
 import { useState } from "react";
 import { COLORES_CHACRA, type Chacra } from "../chacras";
 import { CULTIVOS } from "../cultivos";
-import Icono from "../Icono";
+import Icono, { Dibujo } from "../Icono";
 import { useIdioma } from "../idioma";
 
 export default function EditorChacra({
@@ -89,7 +88,7 @@ export default function EditorChacra({
                     sel ? "border-primario bg-primario text-sobre-primario" : "border-borde bg-tarjeta text-texto"
                   }`}
                 >
-                  <Image src={c.imagen} alt="" width={24} height={24} className="h-6 w-6 rounded-full object-cover" />
+                  <Dibujo nombre={`cultivo-${c.id}`} className="h-7 w-7" />
                   {tr(c.nombre)}
                 </button>
               );
