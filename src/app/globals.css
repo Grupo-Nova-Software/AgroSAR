@@ -199,15 +199,95 @@ body {
 }
 
 /* ---------- Fondo "Del cielo a la raíz" (src/components/FondoCultivoScroll.tsx) ---------- */
-/* Brisa: rotación ±1,2° desde el cuello de la planta, en su propia capa (la compone la GPU). */
+/* Todas las animaciones usan solo transform y opacity: las compone la GPU (sin repintar los SVG). */
+/* Brisa: rotación ±1,2° desde el cuello de la planta; con lluvia y tormenta, más rápida y amplia. */
 @keyframes agro-brisa {
-  0%, 100% { transform: rotate(-1.2deg); }
-  50% { transform: rotate(1.2deg); }
+  0%, 100% { transform: rotate(calc(-1 * var(--brisa-amp, 1.2deg))); }
+  50% { transform: rotate(var(--brisa-amp, 1.2deg)); }
 }
 .agro-brisa {
-  animation: agro-brisa var(--brisa-dur, 6s) ease-in-out var(--brisa-demora, 0s) infinite;
+  animation: agro-brisa calc(var(--brisa-dur, 6s) * var(--brisa-factor, 1)) ease-in-out var(--brisa-demora, 0s) infinite;
   will-change: transform;
 }
+[data-cielo="soleado_calor"] { --brisa-factor: 1.5; --brisa-amp: 0.8deg; }
+[data-cielo="lluvia_suave"] { --brisa-factor: 0.6; --brisa-amp: 1.9deg; }
+[data-cielo="tormenta"] { --brisa-factor: 0.38; --brisa-amp: 2.8deg; }
+
+/* Sol: corona que gira despacio y pulsos de brillo concéntricos */
+@keyframes agro-girar { to { transform: rotate(360deg); } }
+.agro-girar { animation: agro-girar 70s linear infinite; will-change: transform; }
+@keyframes agro-pulso {
+  0%, 100% { transform: scale(1); opacity: 0.85; }
+  50% { transform: scale(1.18); opacity: 1; }
+}
+.agro-pulso { animation: agro-pulso 4s ease-in-out infinite; will-change: transform, opacity; }
+/* Calor: haces de luz que respiran y onda térmica sobre el horizonte */
+@keyframes agro-haz {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 0.85; }
+}
+.agro-haz { animation: agro-haz 6s ease-in-out infinite; will-change: opacity; }
+@keyframes agro-onda {
+  from { transform: translate3d(0, 0, 0) scaleY(1); }
+  50% { transform: translate3d(-25%, 0, 0) scaleY(1.35); }
+  to { transform: translate3d(-50%, 0, 0) scaleY(1); }
+}
+.agro-onda { animation: agro-onda 9s linear infinite; will-change: transform; }
+/* Nubes: cada capa se desplaza en bucle (la duración la pone cada capa: parallax) */
+@keyframes agro-nubes {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(-50%, 0, 0); }
+}
+.agro-nubes { animation: agro-nubes 90s linear infinite; will-change: transform; }
+/* Lluvia: el mosaico baja exactamente una baldosa (sin saltos); salpicaduras al tocar el suelo */
+@keyframes agro-lluvia-cerca {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(-40px, 160px, 0); }
+}
+@keyframes agro-lluvia-lejos {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(-28px, 112px, 0); }
+}
+.agro-lluvia-cerca { animation: agro-lluvia-cerca 0.6s linear infinite; will-change: transform; }
+.agro-lluvia-lejos { animation: agro-lluvia-lejos 0.9s linear infinite; will-change: transform; }
+@keyframes agro-salpica {
+  0% { transform: scale(0.2); opacity: 0; }
+  20% { opacity: 0.9; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+.agro-salpica { opacity: 0; animation: agro-salpica 0.9s ease-out infinite; }
+/* Tormenta: destello breve y ocasional */
+@keyframes agro-flash {
+  0%, 68%, 74%, 100% { opacity: 0; }
+  69% { opacity: 0.55; }
+  70% { opacity: 0.1; }
+  71.5% { opacity: 0.7; }
+}
+.agro-flash { opacity: 0; animation: agro-flash 7s linear infinite; }
+/* Recarga del suelo con la lluvia: la franja 0–5 cm late y las gotas bajan por las raíces */
+@keyframes agro-recarga {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+.agro-recarga { animation: agro-recarga 3s ease-in-out infinite; }
+@keyframes agro-infiltra {
+  0% { transform: translate3d(0, 0, 0) scale(0.6); opacity: 0; }
+  15% { opacity: 0.95; }
+  80% { opacity: 0.7; }
+  100% { transform: translate3d(0, 34vh, 0) scale(1); opacity: 0; }
+}
+.agro-infiltra { opacity: 0.6; animation: agro-infiltra 3.6s ease-in infinite; will-change: transform, opacity; }
+/* Helada: bruma que va y viene y escarcha que titila */
+@keyframes agro-bruma {
+  0%, 100% { transform: translate3d(-3vw, 0, 0); opacity: 0.65; }
+  50% { transform: translate3d(3vw, 0, 0); opacity: 0.9; }
+}
+.agro-bruma { animation: agro-bruma 14s ease-in-out infinite; will-change: transform, opacity; }
+@keyframes agro-titila {
+  0%, 100% { opacity: 0.2; }
+  50% { opacity: 1; }
+}
+.agro-titila { animation: agro-titila 2.4s ease-in-out infinite; }
 /* Modo oscuro: la escena en penumbra para no encandilar */
 .agro-noche { background: #06100a; opacity: 0; }
 :root[data-theme="dark"] .agro-noche { opacity: 0.55; }
@@ -218,9 +298,19 @@ body {
 .sobre-fondo {
   background: color-mix(in srgb, var(--fondo) 88%, transparent);
   border: 1px solid var(--borde);
-  -webkit-backdrop-filter: blur(2px);
-  backdrop-filter: blur(2px);
   transition: border-color 0.4s ease, box-shadow 0.4s ease;
+}
+/* Tarjetas sobre el fondo animado (solo cuando el fondo está presente: data-estrato lo pone el fondo) */
+:root[data-estrato] .bg-tarjeta { background-color: color-mix(in srgb, var(--tarjeta) 85%, transparent); }
+:root[data-estrato] .bg-tarjeta-2 { background-color: color-mix(in srgb, var(--tarjeta-2) 85%, transparent); }
+/* El desenfoque se recalcula cada vez que el fondo se mueve: solo en pantallas grandes, no en celulares económicos */
+@media (min-width: 768px) {
+  .sobre-fondo,
+  :root[data-estrato] .bg-tarjeta,
+  :root[data-estrato] .bg-tarjeta-2 {
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+  }
 }
 /* Según la profundidad: verde campo en la superficie, dorado cálido en la zona de raíces */
 :root[data-estrato="superficie"] .sobre-fondo { border-color: var(--campo); }

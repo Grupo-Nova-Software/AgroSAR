@@ -33,7 +33,7 @@ export default function ClimaSimple({ datos }: { datos: RespuestaClima }) {
       {/* Ahora, hoy y mañana */}
       <section aria-label={es ? "Hoy y mañana" : "Today and tomorrow"}>
         {ahora && typeof ahora.temp_c === "number" && (
-          <p className="mb-2 flex flex-wrap items-baseline gap-x-3 px-1 text-lg">
+          <p className="sobre-fondo mb-2 flex w-fit max-w-full flex-wrap items-baseline gap-x-3 rounded-2xl px-3 py-2 text-lg">
             <span className="font-bold text-texto-suave">{es ? "Ahora" : "Now"}</span>
             <span className="font-display text-4xl font-bold leading-none">{n(ahora.temp_c, 0)} °C</span>
             {typeof ahora.viento_kmh === "number" && (
