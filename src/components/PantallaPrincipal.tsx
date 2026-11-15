@@ -1,18 +1,26 @@
 "use client";
 // Página principal (diseño: public/imagenes/MainScreen.png).
-// Móvil: slider horizontal con snap; el fondo toma el color del cultivo visible.
-// Escritorio: 3 tarjetas en fila; el fondo toma el color del cultivo bajo el cursor/foco.
+// Móvil: slider horizontal con snap; el fondo "Del cielo a la raíz" muestra el cultivo visible.
+// Escritorio: 3 tarjetas en fila; el fondo muestra el último cultivo bajo el cursor/foco.
+// Debajo, tres secciones (cielo, superficie, raíces) que acompañan la bajada del fondo con el scroll.
 import Image from "next/image";
 import Link from "next/link";
-import { useRef, useState, type CSSProperties } from "react";
-import { CULTIVOS, fondoDe } from "./cultivos";
-import { useIdioma } from "./idioma";
+import { useRef, useState } from "react";
+import { CULTIVOS, type Cultivo } from "./cultivos";
+import FondoCultivoScroll from "./FondoCultivoScroll";
+import { useIdioma, type Clave } from "./idioma";
 import Marco from "./Marco";
+
+const CAPAS: { icono: string; titulo: Clave; texto: Clave; clase: string }[] = [
+  { icono: "☀️", titulo: "capaCieloTitulo", texto: "capaCieloTexto", clase: "mt-10 md:mt-16" },
+  { icono: "🌱", titulo: "capaSuperficieTitulo", texto: "capaSuperficieTexto", clase: "mt-[38vh]" },
+  { icono: "🪱", titulo: "capaRaizTitulo", texto: "capaRaizTexto", clase: "mt-[48vh]" },
+];
 
 export default function PantallaPrincipal() {
   const { t, tr } = useIdioma();
   const [activo, setActivo] = useState(0); // tarjeta centrada en el slider (móvil)
-  const [enfocado, setEnfocado] = useState<number | null>(null); // hover/foco (escritorio)
+  const [fondo, setFondo] = useState<Cultivo["id"]>(CULTIVOS[0].id); // cultivo que dibuja el fondo
   const sliderRef = useRef<HTMLUListElement>(null);
 
   // Detecta qué tarjeta está más cerca del centro del slider.
@@ -31,6 +39,7 @@ export default function PantallaPrincipal() {
       }
     });
     setActivo(mejor);
+    setFondo(CULTIVOS[mejor].id);
   };
 
   const irA = (i: number) => {
@@ -38,18 +47,9 @@ export default function PantallaPrincipal() {
     hijo?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
   };
 
-  // Móvil y escritorio usan variables distintas: CSS elige según el ancho, sin esperar a JavaScript.
-  const fondos = {
-    "--fondo-movil": fondoDe(CULTIVOS[activo].id),
-    "--fondo-escritorio": enfocado !== null ? fondoDe(CULTIVOS[enfocado].id) : "var(--fondo)",
-  } as CSSProperties;
-
   return (
-    <Marco
-      className="bg-[var(--fondo-movil)] transition-colors duration-500 ease-out md:bg-[var(--fondo-escritorio)]"
-      style={fondos}
-    >
-      <section className="text-center">
+    <Marco fondo={<FondoCultivoScroll cultivoActivo={fondo} />}>
+      <section className="sobre-fondo mx-auto w-fit max-w-full rounded-3xl px-6 py-4 text-center">
         <h1 className="font-display text-4xl font-bold tracking-tight text-texto md:text-6xl">{t("titulo")}</h1>
         <p className="mt-2 text-lg text-texto-suave">{t("subtitulo")}</p>
       </section>
@@ -63,10 +63,8 @@ export default function PantallaPrincipal() {
           <li
             key={c.id}
             className="w-[82%] shrink-0 snap-center md:w-auto"
-            onMouseEnter={() => setEnfocado(i)}
-            onMouseLeave={() => setEnfocado(null)}
-            onFocus={() => setEnfocado(i)}
-            onBlur={() => setEnfocado(null)}
+            onMouseEnter={() => setFondo(c.id)}
+            onFocus={() => setFondo(c.id)}
           >
             <Link
               href={`/suelo?cultivo=${c.id}`}
@@ -110,7 +108,37 @@ export default function PantallaPrincipal() {
           />
         ))}
       </div>
-      <p className="mt-auto pt-10 text-center text-sm text-texto-suave">{t("pie")}</p>
+
+      {/* Del cielo a la raíz: cada sección coincide con un estrato del fondo */}
+      <section aria-labelledby="historia" className="mx-auto w-full max-w-xl">
+        <div className="sobre-fondo mt-10 rounded-3xl px-5 py-4 text-center md:mt-14">
+          <h2 id="historia" className="font-display text-2xl font-bold tracking-tight text-texto md:text-3xl">
+            {t("historiaTitulo")}
+          </h2>
+          <p className="mt-1 text-base text-texto-suave">
+            {t("historiaBajar")} <span aria-hidden>↓</span>
+          </p>
+        </div>
+        {CAPAS.map((c) => (
+          <article key={c.titulo} className={`sobre-fondo rounded-3xl p-5 ${c.clase}`}>
+            <h3 className="flex items-center gap-2 font-display text-xl font-bold text-texto md:text-2xl">
+              <span aria-hidden>{c.icono}</span>
+              {t(c.titulo)}
+            </h3>
+            <p className="mt-2 text-lg leading-snug text-texto">{t(c.texto)}</p>
+          </article>
+        ))}
+        <div className="mt-8 flex justify-center">
+          <Link
+            href={`/suelo?cultivo=${fondo}`}
+            className="flex min-h-14 items-center rounded-full bg-primario px-7 text-lg font-bold text-sobre-primario shadow-suave hover:bg-primario-hover"
+          >
+            {t("conocer")} · {tr(CULTIVOS.find((c) => c.id === fondo)!.nombre)}
+          </Link>
+        </div>
+      </section>
+
+      <p className="sobre-fondo mx-auto mt-[22vh] w-fit max-w-xl rounded-2xl px-4 py-2 text-center text-sm text-texto-suave">{t("pie")}</p>
     </Marco>
   );
 }

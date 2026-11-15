@@ -60,21 +60,26 @@ export default function Marco({
   cultivo,
   className = "",
   style,
+  fondo,
 }: {
   children: ReactNode;
   variante?: "inicio" | "compacta";
   cultivo?: string; // cultivo elegido (se muestra en la barra compacta y se marca en el menú)
   className?: string;
   style?: CSSProperties;
+  /** Fondo fijo detrás de todo (p. ej. FondoCultivoScroll). El contenido se apila por encima. */
+  fondo?: ReactNode;
 }) {
   const { t, tr } = useIdioma();
   const [abierto, setAbierto] = useState(false);
   const actual = CULTIVOS.find((c) => c.id === cultivo);
+  const sobreFondo = fondo ? "z-[1]" : "";
 
   return (
     <div className={`flex flex-1 flex-col ${className}`} style={style}>
+      {fondo}
       <header
-        className={`relative mx-auto flex w-full max-w-6xl items-center px-3 sm:px-8 ${
+        className={`relative mx-auto flex w-full max-w-6xl items-center px-3 sm:px-8 ${sobreFondo} ${
           variante === "inicio" ? "justify-center pt-4 md:pt-7" : "justify-between gap-3 py-2 md:py-3"
         }`}
       >
@@ -112,7 +117,9 @@ export default function Marco({
         )}
       </header>
 
-      <main className={`mx-auto flex w-full max-w-6xl flex-1 flex-col pb-24 md:pb-28 ${variante === "inicio" ? "px-4 pt-6 sm:px-8" : ""}`}>
+      <main
+        className={`mx-auto flex w-full max-w-6xl flex-1 flex-col pb-24 md:pb-28 ${fondo ? "relative z-[1]" : ""} ${variante === "inicio" ? "px-4 pt-6 sm:px-8" : ""}`}
+      >
         {children}
       </main>
 

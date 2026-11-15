@@ -12,6 +12,7 @@ import { useChacras } from "./chacras";
 import ClimaSimple from "./clima/ClimaSimple";
 import { useClimaTextos } from "./clima/textos";
 import { CULTIVOS } from "./cultivos";
+import FondoCultivoScroll, { type HumedadFondo } from "./FondoCultivoScroll";
 import Marco from "./Marco";
 
 // Lo avanzado (mapa incluido) se descarga recién cuando se pide.
@@ -118,11 +119,17 @@ export default function VistaClima({ cultivo: cultivoParam, area: areaParam }: {
   const cargando = !!clave && resultado?.clave !== clave && fallo !== clave;
   const caidas = datos ? (Object.keys(FUENTES_UI) as (keyof typeof FUENTES_UI)[]).filter((f) => !datos.estado_fuentes[f].ok) : [];
   const control = "h-14 w-full rounded-2xl border-2 border-borde bg-fondo px-3 text-lg font-bold text-texto";
+  // Fondo "Del cielo a la raíz": nubes si hoy llueve (Open-Meteo); halos de agua si la última pasada NISAR
+  // dice que el suelo está bien de agua. Sin datos todavía: día soleado y sin halos.
+  const estadoNisar = datos?.sequia.nisar?.estado;
+  const humedadFondo: HumedadFondo =
+    estadoNisar === "optimo" || estadoNisar === "humedo" ? "buena" : estadoNisar === "seco" || estadoNisar === "bajo" ? "baja" : null;
+  const fondo = <FondoCultivoScroll cultivoActivo={cultivo as (typeof CULTIVOS)[number]["id"]} lluvia={!!datos?.lluvia?.hoy.llueve} humedad={humedadFondo} />;
 
   return (
-    <Marco variante="compacta" cultivo={cultivo}>
+    <Marco variante="compacta" cultivo={cultivo} fondo={fondo}>
       <div className="space-y-4 px-3 md:px-8">
-        <header>
+        <header className="sobre-fondo rounded-3xl p-4">
           <h1 className="font-display text-3xl font-bold leading-tight">{es ? "El clima en tu chacra" : "Weather on your field"}</h1>
           <label className="mt-2 flex flex-col gap-1 text-base font-bold text-texto-suave">
             {es ? "¿Dónde?" : "Where?"}
@@ -187,7 +194,7 @@ export default function VistaClima({ cultivo: cultivoParam, area: areaParam }: {
               <span aria-hidden>{avanzado ? "▲" : "🗺️"}</span>
               {avanzado ? (es ? "Ocultar datos avanzados" : "Hide advanced data") : es ? "Ver datos avanzados y mapa del clima" : "Show advanced data and weather map"}
             </button>
-            <p className="text-sm leading-snug text-texto-suave">
+            <p className="sobre-fondo rounded-2xl px-4 py-2 text-sm leading-snug text-texto-suave">
               {es
                 ? "Pronóstico: Open-Meteo (modelo; no es dato de NASA). Lluvia de los últimos días: NASA POWER. Agua del suelo: radar NISAR (NASA-ISRO)."
                 : "Forecast: Open-Meteo (model; not NASA data). Recent rain: NASA POWER. Soil water: NISAR radar (NASA-ISRO)."}

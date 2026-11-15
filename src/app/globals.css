@@ -198,6 +198,43 @@ body {
   * { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
 }
 
+/* ---------- Fondo "Del cielo a la raíz" (src/components/FondoCultivoScroll.tsx) ---------- */
+/* Brisa: rotación ±1,2° desde el cuello de la planta, en su propia capa (la compone la GPU). */
+@keyframes agro-brisa {
+  0%, 100% { transform: rotate(-1.2deg); }
+  50% { transform: rotate(1.2deg); }
+}
+.agro-brisa {
+  animation: agro-brisa var(--brisa-dur, 6s) ease-in-out var(--brisa-demora, 0s) infinite;
+  will-change: transform;
+}
+/* Modo oscuro: la escena en penumbra para no encandilar */
+.agro-noche { background: #06100a; opacity: 0; }
+:root[data-theme="dark"] .agro-noche { opacity: 0.55; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .agro-noche { opacity: 0.55; }
+}
+/* Velo de legibilidad para lo que va directo sobre el fondo (títulos, textos sueltos) */
+.sobre-fondo {
+  background: color-mix(in srgb, var(--fondo) 88%, transparent);
+  border: 1px solid var(--borde);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+  transition: border-color 0.4s ease, box-shadow 0.4s ease;
+}
+/* Según la profundidad: verde campo en la superficie, dorado cálido en la zona de raíces */
+:root[data-estrato="superficie"] .sobre-fondo { border-color: var(--campo); }
+:root[data-estrato="raiz"] .sobre-fondo {
+  border-color: var(--dorado);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--dorado) 35%, transparent), var(--sombra);
+}
+/* Medidor de profundidad */
+.medidor-punto { transform: translateY(calc(var(--scroll-depth, 0) * (44vh - 11px))); }
+.medidor-capa { opacity: 0.5; transform-origin: right center; transition: opacity 0.3s ease, transform 0.3s ease; }
+:root[data-estrato="cielo"] .medidor-capa[data-capa="cielo"],
+:root[data-estrato="superficie"] .medidor-capa[data-capa="superficie"],
+:root[data-estrato="raiz"] .medidor-capa[data-capa="raiz"] { opacity: 1; }
+
 /* Vista aérea: un poco más de color y contraste para que los lotes y caminos se distingan mejor */
 .leaflet-layer.vista-aerea {
   filter: saturate(1.18) contrast(1.07);
