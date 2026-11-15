@@ -8,9 +8,11 @@ import { useEffect, useRef, useState } from "react";
 import type { EstadoRecomendacion, IndiceHumedad, SerieHumedad } from "@/types/contratos";
 import { claveDe, useChacras } from "../chacras";
 import { CULTIVOS } from "../cultivos";
+import { FondoGlobal } from "../FondoCultivoScroll";
 import { useIdioma } from "../idioma";
 import Icono from "../Icono";
 import Marco from "../Marco";
+import { useCultivoGuardado, useZonaGuardada } from "../preferencias";
 import {
   dentroDe, hectareasDe, pedirAnalisis, pedirEstados, pedirUmbrales,
   UMBRALES_DEFECTO, type Analisis, type LonLat, type UmbralesHumedad,
@@ -39,12 +41,17 @@ export default function VistaSuelo({
   const { chacras, cargadas, agregar, actualizar, borrar } = useChacras();
   const { pendientes, enLinea } = useResultados(chacras, actualizar);
 
+  // Cultivo y zona compartidos con Inicio y Clima: la URL manda; sin parámetros, el último elegido.
+  const [cultivoGuardado, guardarCultivo] = useCultivoGuardado();
+  const [zonaGuardada, guardarZona] = useZonaGuardada();
+
   // Chacra a mostrar: la pedida en la URL; si no, la primera que siembra el cultivo elegido.
   const cultivoUrl = CULTIVOS.find((c) => c.id === cultivoParam)?.id;
+  const cultivoElegido = cultivoUrl ?? cultivoGuardado ?? undefined;
   const chacra =
     chacras.find((c) => c.id === chacraParam) ??
-    (chacraParam === "ninguna" || areaParam ? undefined : chacras.find((c) => !cultivoUrl || c.cultivo === cultivoUrl));
-  const cultivo: Cultivo = chacra?.cultivo ?? cultivoUrl ?? "soja";
+    (chacraParam === "ninguna" || areaParam ? undefined : chacras.find((c) => !cultivoElegido || c.cultivo === cultivoElegido));
+  const cultivo: Cultivo = chacra?.cultivo ?? cultivoElegido ?? "soja";
   const cultivoCfg = CULTIVOS.find((c) => c.id === cultivo)!;
 
   const [areas, setAreas] = useState<SerieHumedad[]>([]);
@@ -53,7 +60,18 @@ export default function VistaSuelo({
   const [analisis, setAnalisis] = useState<{ clave: string; datos: Analisis } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [recienGuardada, setRecienGuardada] = useState<string | null>(null);
-  const areaId = (areaParam && areas.some((a) => a.id === areaParam) ? areaParam : areas[0]?.id) ?? "";
+  const valida = (z: string | null | undefined) => !!z && areas.some((a) => a.id === z);
+  const areaId = (valida(areaParam) ? areaParam : valida(zonaGuardada) ? zonaGuardada : areas[0]?.id) ?? "";
+
+  // Lo que el usuario elige acá (cultivo o chacra en la URL, zona) pasa a Inicio y Clima.
+  const eligioCultivo = !!(cultivoUrl || (chacraParam && chacra));
+  useEffect(() => {
+    if (eligioCultivo) guardarCultivo(cultivo);
+  }, [eligioCultivo, cultivo, guardarCultivo]);
+  useEffect(() => {
+    if (areaParam && valida(areaParam)) guardarZona(areaParam);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `valida` depende de `areas`
+  }, [areaParam, areas, guardarZona]);
 
   const ir = (p: Record<string, string>) => router.replace(`/suelo?${new URLSearchParams(p).toString()}`, { scroll: false });
   const elegirZona = (id: string) => ir({ cultivo, area: id, chacra: "ninguna" });
@@ -182,7 +200,7 @@ export default function VistaSuelo({
   const serieGrafico = chacra ? (res?.serie?.length ? res.serie : null) : (area?.serie ?? null);
 
   return (
-    <Marco variante="compacta" cultivo={cultivo}>
+    <Marco variante="compacta" cultivo={cultivo} fondo={<FondoGlobal cultivo={cultivo} zona={areaId || zonaGuardada} />}>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-5 md:gap-5 md:px-8">
         <div className="min-w-0 md:col-span-3">
           {areas.length && cargadas ? (

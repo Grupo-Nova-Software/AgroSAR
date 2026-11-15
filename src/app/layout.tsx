@@ -10,13 +10,15 @@ const titulo = Bricolage_Grotesque({ variable: "--font-titulo", subsets: ["latin
 const texto = Atkinson_Hyperlegible({ variable: "--font-texto", subsets: ["latin"], weight: ["400", "700"] });
 
 export const metadata: Metadata = {
-  title: "AgroSAR Itapúa",
+  title: "AgroSAR",
+  applicationName: "AgroSAR",
+  appleWebApp: { capable: true, title: "AgroSAR", statusBarStyle: "default" },
   description: "Soil moisture from NISAR radar for farmers in Itapúa, Paraguay (NASA Space Apps 2026).",
 };
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#287d45" },
+    { media: "(prefers-color-scheme: light)", color: "#1f7a3f" },
     { media: "(prefers-color-scheme: dark)", color: "#101613" },
   ],
   viewportFit: "cover",

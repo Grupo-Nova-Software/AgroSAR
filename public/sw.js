@@ -6,7 +6,7 @@
  * - Mapa (vista aérea Esri, nombres, calles OSM): las partes ya vistas quedan guardadas (con tope).
  * Las chacras y su último resultado se guardan aparte, en localStorage (src/components/chacras.ts).
  */
-const VERSION = "agrosar-v2";
+const VERSION = "agrosar-v3";
 const APP = `${VERSION}-app`;
 const PAGINAS = `${VERSION}-paginas`;
 const DATOS = `${VERSION}-datos`;
@@ -102,7 +102,7 @@ self.addEventListener("fetch", (e) => {
 
   if (req.mode === "navigate") {
     e.respondWith(redPrimero(req, PAGINAS, { ignorarQuery: true, respaldo: "/" }));
-  } else if (u.pathname.startsWith("/_next/static/") || u.pathname.startsWith("/_next/image") || u.pathname.startsWith("/imagenes/") || u.pathname.startsWith("/dibujos/") || u.pathname === "/icon.svg") {
+  } else if (u.pathname.startsWith("/_next/static/") || u.pathname.startsWith("/_next/image") || u.pathname.startsWith("/imagenes/") || u.pathname.startsWith("/dibujos/") || u.pathname.startsWith("/iconos/") || u.pathname === "/icon.svg") {
     e.respondWith(guardadoPrimero(req, APP));
   } else if (u.pathname.startsWith("/data/")) {
     e.respondWith(guardadoYActualizar(req, DATOS));

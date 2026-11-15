@@ -49,6 +49,7 @@ const TRAZOS = {
   abajo: <path d="M12 4.500v15M6 13.500l6 6 6-6" />,
   arriba: <path d="M6 14.500l6-6 6 6" />,
   mas: <path d="M12 5v14M5 12h14" />,
+  descargar: <path d="M12 3.500v11M7.500 10.500l4.500 4.500 4.500-4.500M4.500 17v2a1.500 1.500 0 0 0 1.500 1.500h12a1.500 1.500 0 0 0 1.500-1.500v-2" />,
   derecha: <path d="m9 5 7 7-7 7" />,
   pulverizar: (
     <>
