@@ -12,20 +12,8 @@ import { useChacras } from "./chacras";
 import ClimaSimple from "./clima/ClimaSimple";
 import { useClimaTextos } from "./clima/textos";
 import { CULTIVOS } from "./cultivos";
-import { cieloActual, cieloDeDia, humedadDe, type EstadoCielo } from "./fondo/cielo";
-import FondoCultivoScroll from "./FondoCultivoScroll";
+import FondoCultivoScroll, { type HumedadFondo } from "./FondoCultivoScroll";
 import Marco from "./Marco";
-import { esCultivo, useCultivoGuardado, useZonaGuardada } from "./preferencias";
-
-const NOMBRE_CIELO: Record<EstadoCielo, { icono: string; es: string; en: string }> = {
-  soleado_calor: { icono: "🔥", es: "Sol y calor fuerte", en: "Sunny and very hot" },
-  despejado: { icono: "☀️", es: "Despejado", en: "Clear" },
-  parcial_nublado: { icono: "⛅", es: "Parcialmente nublado", en: "Partly cloudy" },
-  nublado: { icono: "☁️", es: "Nublado", en: "Cloudy" },
-  lluvia_suave: { icono: "🌧️", es: "Lluvia", en: "Rain" },
-  tormenta: { icono: "⛈️", es: "Tormenta", en: "Storm" },
-  helada_frio: { icono: "❄️", es: "Frío / riesgo de helada", en: "Cold / frost risk" },
-};
 
 // Lo avanzado (mapa incluido) se descarga recién cuando se pide.
 const ClimaAvanzado = dynamic(() => import("./clima/ClimaAvanzado"), {
@@ -55,23 +43,13 @@ export default function VistaClima({ cultivo: cultivoParam, area: areaParam }: {
   const [intento, setIntento] = useState(0);
   const [avanzado, setAvanzado] = useState(false);
   const refAvanzado = useRef<HTMLDivElement>(null);
-  // Cultivo y zona compartidos con Inicio y Mi suelo
-  const [cultivoGuardado, guardarCultivo] = useCultivoGuardado();
-  const [zonaGuardada, guardarZona] = useZonaGuardada();
-  /** Momento que muestra el cielo del fondo: "ahora" o un día del pronóstico (AAAA-MM-DD). */
-  const [momento, setMomento] = useState<string>("ahora");
 
-  // Lugar por defecto: la última zona elegida; si no hay, la primera chacra guardada; si no, la primera zona
-  const zonaPrevia = zonaGuardada && areas.some((a) => a.id === zonaGuardada) ? `zona:${zonaGuardada}` : null;
-  const lugarActual = lugar ?? (cargadas ? (zonaPrevia ?? (chacras[0] ? `chacra:${chacras[0].id}` : areas[0] ? `zona:${areas[0].id}` : null)) : null);
+  // Lugar por defecto: la primera chacra guardada; si no hay, la primera zona
+  const lugarActual = lugar ?? (cargadas ? (chacras[0] ? `chacra:${chacras[0].id}` : areas[0] ? `zona:${areas[0].id}` : null) : null);
   const chacra = lugarActual?.startsWith("chacra:") ? chacras.find((c) => `chacra:${c.id}` === lugarActual) : undefined;
   const zonaElegida = lugarActual?.startsWith("zona:") ? lugarActual.slice(5) : "";
   const areaId = (areas.some((a) => a.id === zonaElegida) ? zonaElegida : areas[0]?.id) ?? "";
-  const cultivoUrl = esCultivo(cultivoParam) ? cultivoParam : null;
-  const cultivo = chacra?.cultivo ?? cultivoUrl ?? cultivoGuardado ?? CULTIVOS[0].id;
-  useEffect(() => {
-    if (cultivoUrl) guardarCultivo(cultivoUrl);
-  }, [cultivoUrl, guardarCultivo]);
+  const cultivo = chacra?.cultivo ?? (CULTIVOS.find((c) => c.id === cultivoParam) ?? CULTIVOS[0]).id;
   const punto = chacra
     ? {
         lat: Number((chacra.vertices.reduce((s, v) => s + v[1], 0) / chacra.vertices.length).toFixed(4)),
@@ -126,12 +104,7 @@ export default function VistaClima({ cultivo: cultivoParam, area: areaParam }: {
   }, []);
   const cambiarLugar = (v: string) => {
     setLugar(v);
-    if (v.startsWith("zona:")) {
-      guardarZona(v.slice(5));
-      router.replace(`/clima?${new URLSearchParams({ cultivo, area: v.slice(5) }).toString()}`, { scroll: false });
-    }
-    const elegida = v.startsWith("chacra:") ? chacras.find((c) => `chacra:${c.id}` === v) : undefined;
-    if (elegida && esCultivo(elegida.cultivo)) guardarCultivo(elegida.cultivo);
+    if (v.startsWith("zona:")) router.replace(`/clima?${new URLSearchParams({ cultivo, area: v.slice(5) }).toString()}`, { scroll: false });
   };
   const alternarAvanzado = () => {
     const nuevo = !avanzado;
@@ -146,20 +119,12 @@ export default function VistaClima({ cultivo: cultivoParam, area: areaParam }: {
   const cargando = !!clave && resultado?.clave !== clave && fallo !== clave;
   const caidas = datos ? (Object.keys(FUENTES_UI) as (keyof typeof FUENTES_UI)[]).filter((f) => !datos.estado_fuentes[f].ok) : [];
   const control = "h-14 w-full rounded-2xl border-2 border-borde bg-fondo px-3 text-lg font-bold text-texto";
-  // Fondo "Del cielo a la raíz": el cielo del momento elegido (ahora o un día del pronóstico) y halos de agua
-  // si la última pasada NISAR dice que el suelo está bien de agua. Sin datos todavía: despejado y sin halos.
-  const dias = datos?.diario.slice(0, 7) ?? [];
-  const diaElegido = momento === "ahora" ? undefined : dias.find((d) => d.fecha === momento);
-  const cielo: EstadoCielo = (diaElegido ? cieloDeDia(diaElegido) : cieloActual(datos)) ?? "despejado";
-  const fondo = <FondoCultivoScroll cultivoActivo={esCultivo(cultivo) ? cultivo : "soja"} cielo={cielo} humedad={humedadDe(datos)} />;
-  const nombreDia = (fecha: string, i: number) =>
-    i === 0
-      ? es ? "Hoy" : "Today"
-      : i === 1
-        ? es ? "Mañana" : "Tomorrow"
-        : new Date(`${fecha}T12:00:00`).toLocaleDateString(es ? "es-PY" : "en-US", { weekday: "short", day: "numeric" });
-  const chip = (activo: boolean) =>
-    `min-h-11 shrink-0 rounded-full border-2 px-3 text-sm font-bold ${activo ? "border-primario bg-primario text-sobre-primario" : "border-borde bg-fondo text-texto"}`;
+  // Fondo "Del cielo a la raíz": nubes si hoy llueve (Open-Meteo); halos de agua si la última pasada NISAR
+  // dice que el suelo está bien de agua. Sin datos todavía: día soleado y sin halos.
+  const estadoNisar = datos?.sequia.nisar?.estado;
+  const humedadFondo: HumedadFondo =
+    estadoNisar === "optimo" || estadoNisar === "humedo" ? "buena" : estadoNisar === "seco" || estadoNisar === "bajo" ? "baja" : null;
+  const fondo = <FondoCultivoScroll cultivoActivo={cultivo as (typeof CULTIVOS)[number]["id"]} lluvia={!!datos?.lluvia?.hoy.llueve} humedad={humedadFondo} />;
 
   return (
     <Marco variante="compacta" cultivo={cultivo} fondo={fondo}>
@@ -190,10 +155,7 @@ export default function VistaClima({ cultivo: cultivoParam, area: areaParam }: {
               <select
                 className={control}
                 value={cultivo}
-                onChange={(e) => {
-                  if (esCultivo(e.target.value)) guardarCultivo(e.target.value);
-                  router.replace(`/clima?${new URLSearchParams({ cultivo: e.target.value, ...(areaId ? { area: areaId } : {}) }).toString()}`, { scroll: false });
-                }}
+                onChange={(e) => router.replace(`/clima?${new URLSearchParams({ cultivo: e.target.value, ...(areaId ? { area: areaId } : {}) }).toString()}`, { scroll: false })}
               >
                 {CULTIVOS.map((c) => (
                   <option key={c.id} value={c.id}>{c.nombre[idioma]}</option>
@@ -220,24 +182,6 @@ export default function VistaClima({ cultivo: cultivoParam, area: areaParam }: {
         <div aria-busy={cargando} className={cargando && datos ? "opacity-60 transition-opacity" : "transition-opacity"}>
           {datos ? <ClimaSimple datos={datos} /> : fallo !== clave && <p className="rounded-3xl bg-tarjeta p-6 text-center text-lg text-texto-suave">{tc("cargando")}</p>}
         </div>
-
-        {datos && dias.length > 0 && (
-          <div className="sobre-fondo rounded-2xl px-3 py-2">
-            <p className="text-sm font-bold text-texto-suave" id="cielo-fondo">
-              {es ? "Cielo del fondo" : "Background sky"}: <span aria-hidden>{NOMBRE_CIELO[cielo].icono}</span> {NOMBRE_CIELO[cielo][idioma]}
-            </p>
-            <div role="radiogroup" aria-labelledby="cielo-fondo" className="slider-sin-barra mt-1.5 flex gap-1.5 overflow-x-auto pb-0.5">
-              <button type="button" role="radio" aria-checked={momento === "ahora"} onClick={() => setMomento("ahora")} className={chip(momento === "ahora")}>
-                {es ? "Ahora" : "Now"}
-              </button>
-              {dias.map((d, i) => (
-                <button key={d.fecha} type="button" role="radio" aria-checked={momento === d.fecha} onClick={() => setMomento(d.fecha)} className={chip(momento === d.fecha)}>
-                  <span aria-hidden>{NOMBRE_CIELO[cieloDeDia(d)].icono}</span> {nombreDia(d.fecha, i)}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
 
         {datos && (
           <>

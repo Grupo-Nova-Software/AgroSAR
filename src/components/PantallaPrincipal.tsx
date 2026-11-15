@@ -5,12 +5,11 @@
 // Debajo, tres secciones (cielo, superficie, raíces) que acompañan la bajada del fondo con el scroll.
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
-import { CULTIVOS } from "./cultivos";
-import { FondoGlobal } from "./FondoCultivoScroll";
+import { useRef, useState } from "react";
+import { CULTIVOS, type Cultivo } from "./cultivos";
+import FondoCultivoScroll from "./FondoCultivoScroll";
 import { useIdioma, type Clave } from "./idioma";
 import Marco from "./Marco";
-import { useCultivoGuardado, useZonaGuardada, type CultivoId } from "./preferencias";
 
 const CAPAS: { icono: string; titulo: Clave; texto: Clave; clase: string }[] = [
   { icono: "☀️", titulo: "capaCieloTitulo", texto: "capaCieloTexto", clase: "mt-10 md:mt-16" },
@@ -21,26 +20,8 @@ const CAPAS: { icono: string; titulo: Clave; texto: Clave; clase: string }[] = [
 export default function PantallaPrincipal() {
   const { t, tr } = useIdioma();
   const [activo, setActivo] = useState(0); // tarjeta centrada en el slider (móvil)
-  // Cultivo compartido con Mi suelo y Clima (se recuerda en el teléfono). En escritorio, pasar el cursor
-  // sobre una tarjeta solo muestra ese cultivo en el fondo; tocarla lo elige.
-  const [guardado, guardar] = useCultivoGuardado();
-  const [zona] = useZonaGuardada();
-  const [vistaPrevia, setVistaPrevia] = useState<CultivoId | null>(null);
-  const fondo: CultivoId = vistaPrevia ?? guardado ?? CULTIVOS[0].id;
+  const [fondo, setFondo] = useState<Cultivo["id"]>(CULTIVOS[0].id); // cultivo que dibuja el fondo
   const sliderRef = useRef<HTMLUListElement>(null);
-
-  // Al volver a Inicio, el slider abre en el cultivo elegido (una sola vez, sin animación).
-  const ubicado = useRef(false);
-  useEffect(() => {
-    const el = sliderRef.current;
-    if (!guardado || ubicado.current || !el) return;
-    ubicado.current = true;
-    const i = CULTIVOS.findIndex((c) => c.id === guardado);
-    const hijo = el.children[i] as HTMLElement | undefined;
-    if (hijo && el.scrollWidth > el.clientWidth) {
-      el.scrollTo({ left: hijo.offsetLeft + hijo.offsetWidth / 2 - el.clientWidth / 2, behavior: "instant" });
-    }
-  }, [guardado]);
 
   // Detecta qué tarjeta está más cerca del centro del slider.
   const alDesplazar = () => {
@@ -58,8 +39,7 @@ export default function PantallaPrincipal() {
       }
     });
     setActivo(mejor);
-    // Deslizar el slider (celular) es elegir: el fondo y las demás pestañas pasan a ese cultivo.
-    if (ubicado.current || !guardado) guardar(CULTIVOS[mejor].id);
+    setFondo(CULTIVOS[mejor].id);
   };
 
   const irA = (i: number) => {
@@ -68,7 +48,7 @@ export default function PantallaPrincipal() {
   };
 
   return (
-    <Marco fondo={<FondoGlobal cultivo={fondo} zona={zona} />}>
+    <Marco fondo={<FondoCultivoScroll cultivoActivo={fondo} />}>
       <section className="sobre-fondo mx-auto w-fit max-w-full rounded-3xl px-6 py-4 text-center">
         <h1 className="font-display text-4xl font-bold tracking-tight text-texto md:text-6xl">{t("titulo")}</h1>
         <p className="mt-2 text-lg text-texto-suave">{t("subtitulo")}</p>
@@ -83,14 +63,11 @@ export default function PantallaPrincipal() {
           <li
             key={c.id}
             className="w-[82%] shrink-0 snap-center md:w-auto"
-            onMouseEnter={() => setVistaPrevia(c.id)}
-            onMouseLeave={() => setVistaPrevia(null)}
-            onFocus={() => setVistaPrevia(c.id)}
-            onBlur={() => setVistaPrevia(null)}
+            onMouseEnter={() => setFondo(c.id)}
+            onFocus={() => setFondo(c.id)}
           >
             <Link
               href={`/suelo?cultivo=${c.id}`}
-              onClick={() => guardar(c.id)}
               aria-label={`${t("irACultivo")} ${tr(c.nombre)}`}
               className="group relative isolate flex aspect-[3/4] flex-col items-center justify-between overflow-hidden rounded-3xl p-5 text-center text-white shadow-suave transition-transform duration-300 md:aspect-[4/3] md:hover:-translate-y-1"
             >
