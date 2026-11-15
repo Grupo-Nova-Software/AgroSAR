@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useChacras, type Chacra } from "./chacras";
 import { CULTIVOS } from "./cultivos";
 import { useIdioma, type Clave } from "./idioma";
+import Icono from "./Icono";
 import Marco from "./Marco";
 import { hectareasDe } from "./suelo/api";
 import { useResultados } from "./suelo/useResultados";
@@ -26,7 +27,7 @@ function Silueta({ c }: { c: Chacra }) {
     .map(([x, y]) => `${(6 + (32 - (ancho * esc) / 2) + (x - x0) * k * esc).toFixed(1)},${(6 + (32 - (alto * esc) / 2) + (y1 - y) * esc).toFixed(1)}`)
     .join(" ");
   return (
-    <svg viewBox="0 0 76 76" className="h-[4.5rem] w-[4.5rem] shrink-0 rounded-2xl bg-[#2c3b2f]" aria-hidden>
+    <svg viewBox="0 0 76 76" className="h-[4.5rem] w-[4.5rem] shrink-0 rounded-xl bg-[#2c3b2f]" aria-hidden>
       <polygon points={puntos} fill={c.color} fillOpacity={0.55} stroke={c.color} strokeWidth={3} strokeLinejoin="round" />
     </svg>
   );
@@ -50,18 +51,18 @@ export default function VistaChacras() {
     <Marco variante="compacta">
       <div className="mx-auto w-full max-w-2xl space-y-4 px-3 md:px-0">
         <div>
-          <h1 className="font-display text-4xl font-bold tracking-tight">{t("chacrasTitulo")}</h1>
-          <p className="mt-1 text-lg text-texto-suave">{t("chacrasSub")}</p>
+          <h1 className="font-display text-3xl font-bold tracking-tight">{t("chacrasTitulo")}</h1>
+          <p className="mt-0.5 text-base text-texto-suave">{t("chacrasSub")}</p>
         </div>
 
-        {!enLinea && <p className="rounded-2xl bg-dorado/25 px-4 py-3 text-base font-bold">📵 {t("sinConexion")}</p>}
+        {!enLinea && <p className="rounded-xl bg-dorado/25 px-4 py-3 text-base font-bold">{t("sinConexion")}</p>}
 
         {cargadas && chacras.length === 0 && (
-          <section className="rounded-3xl border border-borde bg-tarjeta p-6 text-center">
-            <p className="text-5xl" aria-hidden>🌾</p>
+          <section className="rounded-2xl border border-borde bg-tarjeta p-6 text-center">
+            <Icono nombre="chacra" className="mx-auto h-14 w-14 text-primario" />
             <p className="mt-3 text-lg">{t("chacrasVacio")}</p>
-            <Link href="/suelo?nueva=1" className="mt-4 inline-flex h-14 items-center rounded-2xl bg-primario px-6 text-lg font-bold text-sobre-primario">
-              ＋ {t("marcarPrimera")}
+            <Link href="/suelo?nueva=1" className="mt-4 inline-flex h-14 items-center rounded-xl bg-primario px-6 text-lg font-bold text-sobre-primario">
+              {t("marcarPrimera")}
             </Link>
           </section>
         )}
@@ -69,10 +70,10 @@ export default function VistaChacras() {
         {chacras.length > 0 && (
           <>
             {/* Resumen en una línea con los tres colores */}
-            <p className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-2xl bg-tarjeta px-4 py-3 text-base font-bold">
+            <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[15px] font-bold">
               {(["sembrar", "esperar", "precaucion"] as const).map((e) => (
                 <span key={e} className="inline-flex items-center gap-1.5">
-                  <span className="h-4 w-4 rounded-full" style={{ background: COLOR[e] }} aria-hidden />
+                  <span className="h-3 w-3 rounded-full" style={{ background: COLOR[e] }} aria-hidden />
                   {cuenta(e)} {t(`titulo_${e}` as Clave)}
                 </span>
               ))}
@@ -87,8 +88,7 @@ export default function VistaChacras() {
                   <li key={c.id}>
                     <Link
                       href={`/suelo?chacra=${c.id}`}
-                      className="flex gap-3 rounded-3xl border-2 bg-tarjeta p-3 shadow-suave"
-                      style={{ borderColor: r ? COLOR[r.estado] : "var(--borde)" }}
+                      className="flex gap-3 rounded-2xl border border-borde bg-tarjeta p-3 shadow-suave"
                     >
                       <Silueta c={c} />
                       <div className="min-w-0 flex-1">
@@ -102,18 +102,19 @@ export default function VistaChacras() {
                         {r ? (
                           <>
                             <p
-                              className={`mt-2 inline-block rounded-full px-3 py-1 text-base font-bold ${r.estado === "esperar" ? "text-[#2b2410]" : "text-white"}`}
+                              className={`mt-2 inline-block rounded-full px-3 py-0.5 text-[15px] font-bold ${r.estado === "esperar" ? "text-[#2b2410]" : "text-white"}`}
                               style={{ background: COLOR[r.estado] }}
                             >
                               {t(`titulo_${r.estado}` as Clave)}
                             </p>
-                            <p className="mt-1.5 text-base">
-                              💧 {t("aguaSuelo")}: <strong>{t(`agua_${r.humedad.estado}` as Clave)}</strong>
+                            <p className="mt-1.5 text-[15px]">
+                              {t("aguaSuelo")}: <strong>{t(`agua_${r.humedad.estado}` as Clave)}</strong>
                               {pct !== null && <span className="text-texto-suave"> ({pct} %)</span>}
                             </p>
                             {r.humedad.ultima_fecha && (
                               <p className="text-sm text-texto-suave">
-                                🛰️ {fecha(r.humedad.ultima_fecha, true)}
+                                <Icono nombre="satelite" className="mr-1 h-4 w-4 align-[-3px]" />
+                                {fecha(r.humedad.ultima_fecha, true)}
                                 {r.humedad.desactualizada && <span className="font-bold text-peligro"> · {t("haceDias", { n: r.humedad.dias_desde_observacion ?? 0 })}</span>}
                               </p>
                             )}
@@ -123,9 +124,7 @@ export default function VistaChacras() {
                         )}
                         {pendientes.has(c.id) && r && <p className="text-sm text-texto-suave">{t("actualizando")}</p>}
                       </div>
-                      <span className="self-center text-3xl text-texto-suave" aria-hidden>
-                        ›
-                      </span>
+                      <Icono nombre="derecha" className="h-6 w-6 self-center text-texto-suave" />
                     </Link>
                   </li>
                 );
@@ -134,9 +133,10 @@ export default function VistaChacras() {
 
             <Link
               href="/suelo?nueva=1"
-              className="flex h-14 items-center justify-center rounded-2xl border-2 border-dashed border-primario text-lg font-bold text-acento"
+              className="flex h-14 items-center justify-center gap-2 rounded-xl bg-primario text-lg font-bold text-sobre-primario shadow-suave"
             >
-              ＋ {t("agregarOtra")}
+              <Icono nombre="mas" className="h-6 w-6" />
+              {t("agregarOtra")}
             </Link>
           </>
         )}

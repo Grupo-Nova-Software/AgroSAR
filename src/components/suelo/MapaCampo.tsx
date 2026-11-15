@@ -9,22 +9,19 @@
 // Leaflet maneja el <div> del mapa: React NUNCA le cambia las clases (si no, el mapa pierde sus estilos y queda liso).
 import "leaflet/dist/leaflet.css";
 import { useEffect, useRef, useState } from "react";
-import type { Circle, ImageOverlay, LayerGroup, Map as LMap, Marker, Rectangle } from "leaflet";
+import type { Circle, LayerGroup, Map as LMap, Marker, Rectangle } from "leaflet";
 import type { EstadoRecomendacion, SerieHumedad } from "@/types/contratos";
 import { guardarUbicacion, leerUltimaUbicacion, type Chacra } from "../chacras";
+import Icono from "../Icono";
 import { useIdioma } from "../idioma";
 import { capaAerea, ESRI_NOMBRES } from "../mapaBase";
 import { hectareasDe, insertarEsquina, type LonLat } from "./api";
 
-// De cerca, el color del agua va más suave para que se vea bien la chacra en la imagen aérea.
-const opacidadHumedad = (zoom: number) => (zoom >= 16 ? 0.38 : zoom >= 14 ? 0.5 : 0.62);
 const OSM = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
 
 const colorDe = (token: string) => getComputedStyle(document.documentElement).getPropertyValue(token).trim() || "#287d45";
 const TOKEN_ESTADO: Record<EstadoRecomendacion, string> = { sembrar: "--primario", esperar: "--dorado", precaucion: "--peligro" };
 const ll = (v: LonLat[]) => v.map(([lon, lat]) => [lat, lon] as [number, number]);
-
-interface IndiceMapa { bbox: [number, number, number, number]; fechas: string[]; escala: { color: string }[] }
 
 export default function MapaCampo({
   areas,
@@ -49,14 +46,13 @@ export default function MapaCampo({
   dibujarAlAbrir?: boolean;
   alUbicar?: (p: LonLat) => void;
 }) {
-  const { t, fecha, idioma } = useIdioma();
+  const { t, idioma } = useIdioma();
   const contenedor = useRef<HTMLDivElement>(null);
   const mapa = useRef<LMap | null>(null);
   const LRef = useRef<typeof import("leaflet") | null>(null);
   const rects = useRef<Record<string, Rectangle>>({});
   const capaChacras = useRef<LayerGroup | null>(null);
   const capaDibujo = useRef<LayerGroup | null>(null);
-  const capaHumedad = useRef<ImageOverlay | null>(null);
   const ubic = useRef<{ punto: Marker; circulo: Circle; pos: LonLat } | null>(null);
   const [listo, setListo] = useState(false);
 
@@ -64,9 +60,6 @@ export default function MapaCampo({
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [vertices, setVertices] = useState<LonLat[]>([]);
   const historial = useRef<LonLat[][]>([]);
-  const [indice, setIndice] = useState<IndiceMapa | null>(null);
-  const [verHumedad, setVerHumedad] = useState(true);
-  const [iFecha, setIFecha] = useState(-1); // -1 = la última
   const [avisoUbic, setAvisoUbic] = useState(false);
 
   // Valores que los manejadores de Leaflet necesitan leer "al día"
@@ -74,13 +67,6 @@ export default function MapaCampo({
   useEffect(() => {
     vivo.current = { dibujando, vertices, alSeleccionar, alElegirChacra, alUbicar, chacraSel };
   });
-
-  useEffect(() => {
-    fetch("/data/mapa_humedad/index.json")
-      .then((r) => (r.ok ? r.json() : null))
-      .then(setIndice)
-      .catch(() => {});
-  }, []);
 
   // ---------- Crear el mapa ----------
   useEffect(() => {
@@ -91,9 +77,7 @@ export default function MapaCampo({
       if (cancelado || !contenedor.current || mapa.current) return;
       LRef.current = L;
       const m = L.map(contenedor.current, { maxZoom: 19, zoomControl: false });
-      m.createPane("humedad").style.zIndex = "350";
       L.control.zoom({ position: "bottomright" }).addTo(m);
-      m.on("zoomend", () => capaHumedad.current?.setOpacity(opacidadHumedad(m.getZoom())));
 
       // crossOrigin: las teselas se piden con CORS, así el service worker puede guardarlas para usar sin internet
       const satelite = capaAerea(L, m).addTo(m);
@@ -175,7 +159,6 @@ export default function MapaCampo({
       mapa.current?.remove();
       mapa.current = null;
       rects.current = {};
-      capaHumedad.current = null;
       ubic.current = null;
       setListo(false);
     };
@@ -243,27 +226,6 @@ export default function MapaCampo({
     const c = chacras.find((x) => x.id === chacraSel);
     if (c) m.flyToBounds(L.latLngBounds(ll(c.vertices)), { padding: [50, 50], maxZoom: 17, duration: 0.8 });
   }, [listo, chacraSel, chacras]);
-
-  // ---------- Capa de agua en el suelo (NISAR) ----------
-  const fechas = indice?.fechas ?? [];
-  const fechaSel = fechas.length ? fechas[iFecha < 0 ? fechas.length - 1 : Math.min(iFecha, fechas.length - 1)] : null;
-  useEffect(() => {
-    const L = LRef.current;
-    const m = mapa.current;
-    if (!listo || !L || !m) return;
-    const mostrar = verHumedad && !dibujando && indice && fechaSel;
-    if (!mostrar) {
-      capaHumedad.current?.remove();
-      capaHumedad.current = null;
-      return;
-    }
-    const url = `/data/mapa_humedad/${fechaSel}.png`;
-    if (capaHumedad.current) capaHumedad.current.setUrl(url);
-    else {
-      const [lo1, la1, lo2, la2] = indice.bbox;
-      capaHumedad.current = L.imageOverlay(url, [[la1, lo1], [la2, lo2]], { opacity: opacidadHumedad(m.getZoom()), pane: "humedad", attribution: "NISAR (NASA-ISRO)" }).addTo(m);
-    }
-  }, [listo, verHumedad, dibujando, indice, fechaSel]);
 
   // ---------- Dibujo de una chacra (nueva o cambiando la forma) ----------
   useEffect(() => {
@@ -343,24 +305,15 @@ export default function MapaCampo({
       timeout: 15_000,
     });
   };
-  const moverFecha = (d: number) => {
-    if (!fechas.length) return;
-    const actual = iFecha < 0 ? fechas.length - 1 : iFecha;
-    setIFecha(Math.max(0, Math.min(fechas.length - 1, actual + d)));
-  };
-
   const ha = hectareasDe(vertices);
   const num = (n: number) => n.toLocaleString(idioma === "es" ? "es-PY" : "en-US", { maximumFractionDigits: n < 10 ? 1 : 0 });
-  const degradado = indice ? `linear-gradient(90deg, ${indice.escala.map((e) => e.color).join(", ")})` : undefined;
-  const iActual = iFecha < 0 ? fechas.length - 1 : iFecha;
-  const botonChico = "grid h-10 w-10 place-items-center rounded-full bg-barra text-xl font-bold text-texto shadow-suave backdrop-blur disabled:opacity-35";
   const chip = "flex h-11 shrink-0 items-center gap-1.5 rounded-full bg-white/95 px-3.5 text-[15px] font-bold text-[#1e2420] shadow-lg";
 
   return (
     <div>
       <div className="relative">
         {/* El div que maneja Leaflet: clases fijas, nunca cambian */}
-        <div ref={contenedor} className="h-[62svh] min-h-[22rem] w-full md:h-[34rem] md:rounded-3xl" aria-label={t("capaSatelite")} />
+        <div ref={contenedor} className="h-[62svh] min-h-[22rem] w-full md:h-[34rem] md:rounded-2xl" aria-label={t("capaSatelite")} />
 
         {/* Ir a… (arriba, botones grandes) */}
         {!dibujando && (
@@ -370,90 +323,55 @@ export default function MapaCampo({
               {t("dondeEstoy")}
             </button>
             <button type="button" onClick={() => irAZonas()} className={chip}>
-              🛰️ {t("zonasConDatos")}
+              <Icono nombre="satelite" /> {t("zonasConDatos")}
             </button>
             {chacras.length > 0 && (
               <button type="button" onClick={irAChacras} className={chip}>
-                🌾 {t("navChacras")}
+                <Icono nombre="chacra" /> {t("navChacras")}
               </button>
             )}
           </div>
         )}
 
         {dibujando && (
-          <p className="pointer-events-none absolute inset-x-3 top-3 z-[1100] mx-auto max-w-md rounded-2xl bg-black/80 px-4 py-3 text-center text-base font-bold text-white">
+          <p className="pointer-events-none absolute inset-x-3 top-3 z-[1100] mx-auto max-w-md rounded-xl bg-black/80 px-4 py-3 text-center text-base font-bold text-white">
             {vertices.length === 0 ? t("ayudaDibujo0") : t("ayudaDibujoN")}
           </p>
         )}
         {avisoUbic && (
-          <p role="alert" className="absolute inset-x-3 top-16 z-[1100] mx-auto max-w-md rounded-2xl bg-black/85 px-4 py-3 text-center text-sm font-bold text-white">
+          <p role="alert" className="absolute inset-x-3 top-16 z-[1100] mx-auto max-w-md rounded-xl bg-black/85 px-4 py-3 text-center text-sm font-bold text-white">
             {t("sinUbicacion")}
           </p>
         )}
 
-        {/* Agua en el suelo: encender/apagar, leyenda y fecha de la pasada */}
-        {!dibujando && indice && fechaSel && (
-          <div className="absolute bottom-8 left-2 z-[1100] w-[min(17rem,calc(100%-4.5rem))] rounded-2xl bg-barra p-2.5 shadow-suave backdrop-blur">
-            <button
-              type="button"
-              role="switch"
-              aria-checked={verHumedad}
-              onClick={() => setVerHumedad((v) => !v)}
-              className="flex w-full items-center justify-between gap-2 text-left text-base font-bold text-texto"
-            >
-              <span>💧 {t("verHumedad")}</span>
-              <span className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${verHumedad ? "bg-primario" : "bg-borde"}`}>
-                <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${verHumedad ? "left-[1.35rem]" : "left-0.5"}`} />
-              </span>
-            </button>
-            {verHumedad && (
-              <>
-                <div className="mt-2 h-3 rounded-full" style={{ background: degradado }} />
-                <div className="mt-0.5 flex justify-between text-xs font-bold text-texto">
-                  <span>{t("seco")}</span>
-                  <span>{t("bueno")}</span>
-                  <span>{t("mojado")}</span>
-                </div>
-                <div className="mt-1.5 flex items-center justify-between gap-1">
-                  <button type="button" onClick={() => moverFecha(-1)} disabled={iActual <= 0} aria-label={t("anterior")} className={botonChico}>
-                    ‹
-                  </button>
-                  <span className="text-center text-sm font-bold leading-tight text-texto" aria-live="polite">
-                    {t("pasadaDel")} {fecha(fechaSel, true)}
-                  </span>
-                  <button type="button" onClick={() => moverFecha(1)} disabled={iActual >= fechas.length - 1} aria-label={t("siguiente")} className={botonChico}>
-                    ›
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        )}
       </div>
 
       {/* Botones grandes debajo del mapa */}
       <div className="flex flex-wrap gap-2 px-3 pt-3 md:px-0">
         {!dibujando ? (
           <>
-            <button type="button" onClick={empezarNueva} className="h-14 flex-1 rounded-2xl bg-primario px-5 text-lg font-bold text-sobre-primario shadow-suave hover:bg-primario-hover">
-              ＋ {chacras.length ? t("agregarOtra") : t("marcarChacra")}
+            <button type="button" onClick={empezarNueva} className="h-14 flex-1 rounded-xl bg-primario px-5 text-lg font-bold text-sobre-primario shadow-suave hover:bg-primario-hover">
+              <Icono nombre="mas" className="mr-1.5 h-6 w-6 align-[-5px]" />
+              {chacras.length ? t("agregarOtra") : t("marcarChacra")}
             </button>
             {chacraSel && (
-              <button type="button" onClick={cambiarForma} className="h-14 rounded-2xl border-2 border-borde bg-tarjeta px-4 text-base font-bold text-texto">
-                ✏️ {t("cambiarForma")}
+              <button type="button" onClick={cambiarForma} className="h-14 rounded-xl border-2 border-borde bg-tarjeta px-4 text-base font-bold text-texto">
+                <Icono nombre="lapiz" className="mr-1.5 h-5 w-5 align-[-4px]" />
+                {t("cambiarForma")}
               </button>
             )}
           </>
         ) : (
           <>
-            <button type="button" onClick={deshacer} disabled={!vertices.length} className="h-14 rounded-2xl border-2 border-borde bg-tarjeta px-4 text-base font-bold text-texto disabled:opacity-40">
+            <button type="button" onClick={deshacer} disabled={!vertices.length} className="h-14 rounded-xl border-2 border-borde bg-tarjeta px-4 text-base font-bold text-texto disabled:opacity-40">
               ↶ {t("deshacer")}
             </button>
-            <button type="button" onClick={cancelar} className="h-14 rounded-2xl border-2 border-borde bg-tarjeta px-4 text-base font-bold text-texto">
-              ✕ {t("cancelar")}
+            <button type="button" onClick={cancelar} className="h-14 rounded-xl border-2 border-borde bg-tarjeta px-4 text-base font-bold text-texto">
+              {t("cancelar")}
             </button>
-            <button type="button" onClick={terminar} disabled={vertices.length < 3} className="h-14 flex-1 rounded-2xl bg-primario px-5 text-lg font-bold text-sobre-primario shadow-suave disabled:opacity-40">
-              ✓ {t("guardar")}
+            <button type="button" onClick={terminar} disabled={vertices.length < 3} className="h-14 flex-1 rounded-xl bg-primario px-5 text-lg font-bold text-sobre-primario shadow-suave disabled:opacity-40">
+              <Icono nombre="check" className="mr-1.5 h-6 w-6 align-[-5px]" />
+              {t("guardar")}
               {vertices.length >= 3 ? ` · ${num(ha)} ${t("ha")}` : ""}
             </button>
           </>

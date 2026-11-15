@@ -12,12 +12,13 @@ import { useChacras } from "./chacras";
 import ClimaSimple from "./clima/ClimaSimple";
 import { useClimaTextos } from "./clima/textos";
 import { CULTIVOS } from "./cultivos";
+import Icono from "./Icono";
 import Marco from "./Marco";
 
 // Lo avanzado (mapa incluido) se descarga recién cuando se pide.
 const ClimaAvanzado = dynamic(() => import("./clima/ClimaAvanzado"), {
   ssr: false,
-  loading: () => <div className="mx-3 h-64 animate-pulse rounded-3xl bg-tarjeta-2 md:mx-8" />,
+  loading: () => <div className="mx-3 h-64 animate-pulse rounded-2xl bg-tarjeta-2 md:mx-8" />,
 });
 
 const FUENTES_UI: Record<"nasa_power" | "open_meteo" | "climatologia", string> = {
@@ -117,20 +118,20 @@ export default function VistaClima({ cultivo: cultivoParam, area: areaParam }: {
   const datos = resultado?.datos ?? null;
   const cargando = !!clave && resultado?.clave !== clave && fallo !== clave;
   const caidas = datos ? (Object.keys(FUENTES_UI) as (keyof typeof FUENTES_UI)[]).filter((f) => !datos.estado_fuentes[f].ok) : [];
-  const control = "h-14 w-full rounded-2xl border-2 border-borde bg-fondo px-3 text-lg font-bold text-texto";
+  const control = "h-12 w-full rounded-xl border border-borde bg-tarjeta px-3 text-base font-bold text-texto";
 
   return (
     <Marco variante="compacta" cultivo={cultivo}>
       <div className="space-y-4 px-3 md:px-8">
         <header>
           <h1 className="font-display text-3xl font-bold leading-tight">{es ? "El clima en tu chacra" : "Weather on your field"}</h1>
-          <label className="mt-2 flex flex-col gap-1 text-base font-bold text-texto-suave">
+          <label className="mt-2 flex flex-col gap-1 text-sm font-bold text-texto-suave">
             {es ? "¿Dónde?" : "Where?"}
             <select className={control} value={lugarActual ?? ""} onChange={(e) => cambiarLugar(e.target.value)}>
               {chacras.length > 0 && (
                 <optgroup label={es ? "Mis chacras" : "My fields"}>
                   {chacras.map((c) => (
-                    <option key={c.id} value={`chacra:${c.id}`}>🌾 {c.nombre}</option>
+                    <option key={c.id} value={`chacra:${c.id}`}>{c.nombre}</option>
                   ))}
                 </optgroup>
               )}
@@ -139,11 +140,11 @@ export default function VistaClima({ cultivo: cultivoParam, area: areaParam }: {
                   <option key={a.id} value={`zona:${a.id}`}>{a.zona}</option>
                 ))}
               </optgroup>
-              {puntoMapa && <option value="punto">📍 {es ? "Punto elegido en el mapa" : "Point picked on the map"}</option>}
+              {puntoMapa && <option value="punto">{es ? "Punto elegido en el mapa" : "Point picked on the map"}</option>}
             </select>
           </label>
           {!chacra && (
-            <label className="mt-2 flex flex-col gap-1 text-base font-bold text-texto-suave">
+            <label className="mt-2 flex flex-col gap-1 text-sm font-bold text-texto-suave">
               {tc("cultivo")}
               <select
                 className={control}
@@ -159,7 +160,7 @@ export default function VistaClima({ cultivo: cultivoParam, area: areaParam }: {
         </header>
 
         {fallo === clave && clave && (
-          <div role="alert" className="rounded-3xl border-2 border-peligro bg-tarjeta p-4 text-base font-bold">
+          <div role="alert" className="rounded-2xl border-2 border-peligro bg-tarjeta p-4 text-base font-bold">
             <p>{tc("errorClima")}</p>
             <button type="button" onClick={() => setIntento((v) => v + 1)} className="mt-2 h-12 rounded-full bg-primario px-5 font-bold text-sobre-primario">
               {tc("reintentar")}
@@ -167,13 +168,13 @@ export default function VistaClima({ cultivo: cultivoParam, area: areaParam }: {
           </div>
         )}
         {caidas.map((f) => (
-          <p key={f} role="status" className="rounded-2xl border border-dorado bg-tarjeta px-4 py-2 text-base">
+          <p key={f} role="status" className="rounded-xl border border-dorado bg-tarjeta px-4 py-2 text-base">
             ! {tc("fuenteCaida", { fuente: FUENTES_UI[f] })}
           </p>
         ))}
 
         <div aria-busy={cargando} className={cargando && datos ? "opacity-60 transition-opacity" : "transition-opacity"}>
-          {datos ? <ClimaSimple datos={datos} /> : fallo !== clave && <p className="rounded-3xl bg-tarjeta p-6 text-center text-lg text-texto-suave">{tc("cargando")}</p>}
+          {datos ? <ClimaSimple datos={datos} /> : fallo !== clave && <p className="rounded-2xl bg-tarjeta p-6 text-center text-lg text-texto-suave">{tc("cargando")}</p>}
         </div>
 
         {datos && (
@@ -182,9 +183,9 @@ export default function VistaClima({ cultivo: cultivoParam, area: areaParam }: {
               type="button"
               onClick={alternarAvanzado}
               aria-expanded={avanzado}
-              className="flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl border-2 border-primario bg-tarjeta px-4 text-lg font-bold text-acento"
+              className="flex min-h-14 w-full items-center justify-center gap-2 rounded-xl border border-borde bg-tarjeta px-4 text-base font-bold text-acento shadow-suave"
             >
-              <span aria-hidden>{avanzado ? "▲" : "🗺️"}</span>
+              <Icono nombre={avanzado ? "arriba" : "mapa"} />
               {avanzado ? (es ? "Ocultar datos avanzados" : "Hide advanced data") : es ? "Ver datos avanzados y mapa del clima" : "Show advanced data and weather map"}
             </button>
             <p className="text-sm leading-snug text-texto-suave">

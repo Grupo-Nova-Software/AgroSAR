@@ -171,7 +171,7 @@ function Menu({ cultivo, alCerrar }: { cultivo?: string; alCerrar: () => void })
     };
   }, [alCerrar]);
 
-  const fila = "flex min-h-14 w-full items-center gap-3 rounded-2xl px-3 text-lg font-bold";
+  const fila = "flex min-h-14 w-full items-center gap-3 rounded-xl px-3 text-lg font-bold";
   const enlaces: { href: string; clave: Clave; icono: ReactNode }[] = [...PESTANAS, { href: "/ayuda", clave: "navAyuda", icono: ICONOS.ayuda }];
 
   return (
@@ -240,7 +240,7 @@ function Menu({ cultivo, alCerrar }: { cultivo?: string; alCerrar: () => void })
                 type="button"
                 onClick={() => setIdioma(i)}
                 aria-pressed={idioma === i}
-                className={`h-12 rounded-2xl border-2 text-base font-bold ${
+                className={`h-12 rounded-xl border-2 text-base font-bold ${
                   idioma === i ? "border-primario bg-tarjeta-2 text-acento" : "border-borde text-texto"
                 }`}
               >
@@ -253,7 +253,7 @@ function Menu({ cultivo, alCerrar }: { cultivo?: string; alCerrar: () => void })
             role="switch"
             aria-checked={tema === "dark"}
             onClick={alternar}
-            className="flex h-12 w-full items-center justify-between rounded-2xl border-2 border-borde px-4 text-base font-bold"
+            className="flex h-12 w-full items-center justify-between rounded-xl border-2 border-borde px-4 text-base font-bold"
           >
             {t("modoOscuro")}
             <span className={`relative h-7 w-12 rounded-full transition-colors ${tema === "dark" ? "bg-primario" : "bg-borde"}`}>

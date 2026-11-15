@@ -71,7 +71,7 @@ export default function PantallaPrincipal() {
             <Link
               href={`/suelo?cultivo=${c.id}`}
               aria-label={`${t("irACultivo")} ${tr(c.nombre)}`}
-              className="group relative isolate flex aspect-[3/4] flex-col items-center justify-between overflow-hidden rounded-3xl p-5 text-center text-white shadow-suave transition-transform duration-300 md:aspect-[4/3] md:hover:-translate-y-1"
+              className="group relative isolate flex aspect-[3/4] flex-col items-center justify-between overflow-hidden rounded-2xl p-5 text-center text-white shadow-suave transition-transform duration-300 md:aspect-[4/3] md:hover:-translate-y-1"
             >
               <Image
                 src={c.imagen}

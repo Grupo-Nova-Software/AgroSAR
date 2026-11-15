@@ -95,14 +95,14 @@ export default function BalanceHidrico({ datos }: { datos: RespuestaClima }) {
   const dSobre = sobre !== null ? dias[sobre] : null;
 
   const dato = (rotulo: string, valor: string) => (
-    <div className="rounded-2xl bg-fondo px-3 py-2">
+    <div className="rounded-xl bg-fondo px-3 py-2">
       <p className="text-xs font-bold text-texto-suave">{rotulo}</p>
       <p className="font-display text-xl font-bold text-texto">{valor}</p>
     </div>
   );
 
   return (
-    <section className="rounded-3xl border border-borde bg-tarjeta p-4">
+    <section className="rounded-2xl border border-borde bg-tarjeta p-4">
       <h2 className="font-display text-2xl font-bold">{tc("balanceTitulo")}</h2>
       <p className="text-base text-texto-suave">{tc("balanceSub")}</p>
 

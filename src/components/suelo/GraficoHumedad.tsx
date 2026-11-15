@@ -7,9 +7,8 @@ import type { PuntoSerie } from "@/types/contratos";
 import { useIdioma } from "../idioma";
 import type { UmbralesHumedad } from "./api";
 
-const M = { izq: 74, der: 46, arr: 14, aba: 30 }; // izq: columna con el nombre de cada franja
 const Y_MAX = 0.5;
-const ANCHO_ETIQUETA = 64; // px mínimos entre fechas del eje
+const ANCHO_ETIQUETA = 62; // px mínimos entre fechas del eje
 
 export default function GraficoHumedad({ serie, umbrales }: { serie: PuntoSerie[]; umbrales: UmbralesHumedad }) {
   const { t, fecha } = useIdioma();
@@ -22,8 +21,10 @@ export default function GraficoHumedad({ serie, umbrales }: { serie: PuntoSerie[
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
-  const H = W < 500 ? 240 : 280;
-
+  const angosto = W < 500;
+  const H = angosto ? 230 : 280;
+  // En el teléfono casi todo el ancho es para el dibujo: los nombres de las franjas van en una columna angosta.
+  const M = { izq: angosto ? 52 : 70, der: 12, arr: 26, aba: 28 };
   const puntos = serie.filter((p) => typeof p.humedad_m3m3 === "number");
   if (puntos.length < 2) return <p ref={caja as never} className="text-base text-texto-suave">{t("sinDatos")}</p>;
 
@@ -42,56 +43,82 @@ export default function GraficoHumedad({ serie, umbrales }: { serie: PuntoSerie[
   }
 
   const franjas = [
-    { desde: umbrales.optimo_max, hasta: Y_MAX, color: "var(--agua-mojado)", nombre: t("mojado") },
-    { desde: umbrales.bajo_max, hasta: umbrales.optimo_max, color: "var(--agua-bueno)", nombre: t("bueno") },
-    { desde: 0, hasta: umbrales.bajo_max, color: "var(--agua-seco)", nombre: t("seco") },
+    { desde: umbrales.optimo_max, hasta: Y_MAX, tono: "mojado", nombre: t("mojado") },
+    { desde: umbrales.bajo_max, hasta: umbrales.optimo_max, tono: "bueno", nombre: t("bueno") },
+    { desde: 0, hasta: umbrales.bajo_max, tono: "seco", nombre: t("seco") },
   ];
   const ultimo = puntos.at(-1)!;
+  const altoUtil = H - M.arr - M.aba;
+  // Fondo: los tres colores se funden de arriba (mojado) hacia abajo (seco), sin cortes duros
+  const o = (v: number) => 1 - v / Y_MAX;
+  const paradas = [
+    [0, "mojado"], [Math.max(0, o(umbrales.optimo_max) - 0.12), "mojado"], [o(umbrales.optimo_max) + 0.08, "bueno"],
+    [o(umbrales.bajo_max) - 0.08, "bueno"], [Math.min(1, o(umbrales.bajo_max) + 0.12), "seco"], [1, "seco"],
+  ] as const;
+  const area = `${linea} L${x(ultimo.fecha).toFixed(1)},${M.arr + altoUtil} L${x(puntos[0].fecha).toFixed(1)},${M.arr + altoUtil} Z`;
+  const yUlt = y(ultimo.humedad_m3m3!);
+  const rotuloArriba = yUlt - M.arr > 34;
 
   return (
     <div ref={caja}>
       <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H} className="block h-auto w-full" role="img" aria-label={t("graficoTitulo")}>
-        {franjas.map((f) => (
-          <g key={f.nombre}>
-            <rect x={M.izq} width={anchoUtil} y={y(f.hasta)} height={y(f.desde) - y(f.hasta)} fill={f.color} style={{ opacity: "var(--franja-opacidad)" }} />
-            <text x={M.izq - 8} y={(y(f.hasta) + y(f.desde)) / 2 + 5} textAnchor="end" fontSize={14} fontWeight={700} fill={f.color}>
-              {f.nombre}
+        <defs>
+          <linearGradient id="franjas-agua" x1="0" x2="0" y1="0" y2="1">
+            {paradas.map(([d, tono], i) => (
+              <stop key={i} offset={d} stopColor={`var(--agua-${tono})`} />
+            ))}
+          </linearGradient>
+          <linearGradient id="sombra-linea" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0" stopColor="var(--texto)" stopOpacity="0.16" />
+            <stop offset="1" stopColor="var(--texto)" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        <rect x={M.izq} y={M.arr} width={anchoUtil} height={altoUtil} rx={10} fill="url(#franjas-agua)" style={{ opacity: "var(--franja-opacidad)" }} />
+        {franjas.map((f) => {
+          const medio = (y(f.hasta) + y(f.desde)) / 2;
+          return (
+            <text key={f.tono} x={M.izq - 8} textAnchor="end" fill={`var(--agua-${f.tono}-texto)`}>
+              <tspan x={M.izq - 8} y={medio} fontSize={angosto ? 12 : 14} fontWeight={700}>
+                {f.nombre}
+              </tspan>
+              <tspan x={M.izq - 8} y={medio + 14} fontSize={10.5} fill="var(--texto-suave)">
+                {f.desde === 0 ? `< ${Math.round(f.hasta * 100)} %` : f.hasta === Y_MAX ? `> ${Math.round(f.desde * 100)} %` : `${Math.round(f.desde * 100)}–${Math.round(f.hasta * 100)} %`}
+              </tspan>
             </text>
-          </g>
-        ))}
+          );
+        })}
+        {/* Límites del cultivo: línea fina */}
         {[umbrales.bajo_max, umbrales.optimo_max].map((v) => (
-          <line key={v} x1={M.izq} x2={M.izq + anchoUtil} y1={y(v)} y2={y(v)} stroke="var(--texto)" strokeOpacity={0.35} strokeDasharray="5 5" />
-        ))}
-        {/* Eje derecho en % */}
-        {[0.1, 0.2, 0.3, 0.4].map((v) => (
-          <text key={v} x={W - M.der + 8} y={y(v) + 5} fontSize={13} fill="var(--texto-suave)">
-            {Math.round(v * 100)} %
-          </text>
+          <line key={v} x1={M.izq} x2={M.izq + anchoUtil} y1={y(v)} y2={y(v)} stroke="var(--tarjeta)" strokeOpacity={0.9} strokeWidth={1.5} />
         ))}
         {/* Fechas */}
         {elegidas.map((p) => (
-          <text key={p.fecha} x={x(p.fecha)} y={H - 8} textAnchor={p === ultimo ? "end" : "middle"} fontSize={13} fontWeight={p === ultimo ? 700 : 400} fill="var(--texto-suave)">
+          <text key={p.fecha} x={x(p.fecha)} y={H - 8} textAnchor={p === ultimo ? "end" : p === puntos[0] ? "start" : "middle"} fontSize={12} fontWeight={p === ultimo ? 700 : 400} fill="var(--texto-suave)">
             {fecha(p.fecha)}
           </text>
         ))}
-        <path d={linea} fill="none" stroke="var(--texto)" strokeWidth={3} strokeLinejoin="round" strokeLinecap="round" />
+        <path d={area} fill="url(#sombra-linea)" />
+        <path d={linea} fill="none" stroke="var(--texto)" strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" />
         {puntos.map((p) => (
           <circle
             key={p.fecha}
             cx={x(p.fecha)}
             cy={y(p.humedad_m3m3!)}
-            r={p === ultimo ? 7 : 4.5}
-            fill={p.calidad === "buena" ? "var(--texto)" : "var(--tarjeta)"}
-            stroke="var(--texto)"
-            strokeWidth={2.5}
+            r={p === ultimo ? 6.5 : 3.5}
+            fill={p === ultimo || p.calidad === "buena" ? "var(--texto)" : "var(--tarjeta)"}
+            stroke={p === ultimo ? "var(--tarjeta)" : "var(--texto)"}
+            strokeWidth={p === ultimo ? 3 : 2}
           >
             <title>{`${fecha(p.fecha, true)}: ${Math.round(p.humedad_m3m3! * 100)} %`}</title>
           </circle>
         ))}
         {/* Último valor destacado */}
-        <text x={x(ultimo.fecha) - 12} y={y(ultimo.humedad_m3m3!) - 12} textAnchor="end" fontSize={17} fontWeight={800} fill="var(--texto)">
-          {Math.round(ultimo.humedad_m3m3! * 100)} %
-        </text>
+        <g transform={`translate(${x(ultimo.fecha) - 2}, ${rotuloArriba ? yUlt - 16 : yUlt + 30})`}>
+          <rect x={-50} y={-17} width={52} height={23} rx={11.5} fill="var(--texto)" />
+          <text x={-24} y={0} textAnchor="middle" fontSize={14} fontWeight={800} fill="var(--tarjeta)">
+            {Math.round(ultimo.humedad_m3m3! * 100)} %
+          </text>
+        </g>
       </svg>
     </div>
   );

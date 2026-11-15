@@ -12,6 +12,7 @@ import type { SerieHumedad } from "@/types/contratos";
 import type { GrillaClima, RespuestaClima } from "@/lib/clima/tipos";
 import { CAPAS, cssColor, degradado, ESCALAS, interpolar, pintarCapa, posicionEnEscala, prepararCampos, type CapaId, type Modo } from "./escalas";
 import { useChacras } from "../chacras";
+import Icono from "../Icono";
 import { capaAerea, ESRI_NOMBRES } from "../mapaBase";
 import { useClimaTextos, type ClaveClima } from "./textos";
 import { animarViento } from "./viento";
@@ -316,7 +317,7 @@ export default function MapaClima({
     <div>
       <div className="relative">
         {/* El div que maneja Leaflet: clases fijas, nunca cambian */}
-        <div ref={contenedor} className="h-[68svh] min-h-[26rem] w-full md:h-[36rem] md:rounded-t-3xl" aria-label={tc("mapaTitulo")} />
+        <div ref={contenedor} className="h-[68svh] min-h-[26rem] w-full md:h-[36rem] md:rounded-t-2xl" aria-label={tc("mapaTitulo")} />
         {/* Viento en movimiento: se dibuja encima del mapa y no recibe toques */}
         <canvas ref={lienzoViento} aria-hidden className={`pointer-events-none absolute inset-0 z-[1000] h-full w-full ${apoyo.viento && hayViento ? "" : "hidden"}`} />
 
@@ -334,7 +335,7 @@ export default function MapaClima({
             {tc("capasBase")}
           </button>
           {panel && (
-            <fieldset className="mt-2 w-64 rounded-2xl bg-barra p-3 text-sm font-bold text-texto shadow-suave backdrop-blur">
+            <fieldset className="mt-2 w-64 rounded-xl bg-barra p-3 text-sm font-bold text-texto shadow-suave backdrop-blur">
               <legend className="sr-only">{tc("capasBase")}</legend>
               {apoyos.map((a) => (
                 <label key={a.id} className={`flex min-h-9 items-center gap-2 ${a.deshabilitado ? "opacity-55" : ""}`}>
@@ -369,7 +370,7 @@ export default function MapaClima({
                   activa ? "bg-primario text-sobre-primario" : "bg-barra text-texto"
                 }`}
               >
-                <span aria-hidden className="text-lg leading-none">{c.icono}</span>
+                <Icono nombre={c.icono} />
                 <span className="hidden md:inline">{tc(`capa_${c.id}`)}</span>
               </button>
             );
@@ -377,7 +378,7 @@ export default function MapaClima({
         </div>
 
         {/* Leyenda de la capa activa */}
-        <div className="absolute bottom-3 right-2 z-[1100] w-[min(15rem,calc(100%-7rem))] rounded-2xl bg-barra p-2.5 shadow-suave backdrop-blur">
+        <div className="absolute bottom-3 right-2 z-[1100] w-[min(15rem,calc(100%-7rem))] rounded-xl bg-barra p-2.5 shadow-suave backdrop-blur">
           <p className="text-sm font-bold leading-tight text-texto">
             {tc(`capa_${capa}`)} <span className="font-normal text-texto-suave">· {escala.unidad}</span>
           </p>
@@ -397,14 +398,14 @@ export default function MapaClima({
         </div>
 
         {errorGrilla && (
-          <p role="alert" className="absolute inset-x-3 top-16 z-[1100] mx-auto max-w-md rounded-2xl bg-black/80 px-4 py-3 text-center text-sm font-bold text-white">
+          <p role="alert" className="absolute inset-x-3 top-16 z-[1100] mx-auto max-w-md rounded-xl bg-black/80 px-4 py-3 text-center text-sm font-bold text-white">
             {tc("mapaSinGrilla")}
           </p>
         )}
       </div>
 
       {/* Línea de tiempo, pegada al mapa */}
-      <div className="border-x border-b border-borde bg-tarjeta px-3 py-3 md:rounded-b-3xl">
+      <div className="border-x border-b border-borde bg-tarjeta px-3 py-3 md:rounded-b-2xl">
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"

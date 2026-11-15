@@ -2,10 +2,11 @@
 // Clima simple: lo que un agricultor necesita ver de un vistazo.
 // Ahora · hoy · mañana → qué conviene hacer → los próximos 7 días. Todo lo demás está en «Datos avanzados».
 import type { RespuestaClima } from "@/lib/clima/tipos";
+import Icono, { IconoClima } from "../Icono";
 import { consejosDe, fraseDia, iconoDia, type TonoConsejo } from "./simple";
 import { useClimaTextos } from "./textos";
 
-const BORDE: Record<TonoConsejo, string> = { bien: "border-primario", aviso: "border-dorado", peligro: "border-peligro" };
+const FONDO: Record<TonoConsejo, string> = { bien: "bg-primario text-sobre-primario", aviso: "bg-dorado text-[#2b2410]", peligro: "bg-peligro text-white" };
 
 export default function ClimaSimple({ datos }: { datos: RespuestaClima }) {
   const { idioma, n, diaCorto } = useClimaTextos();
@@ -17,14 +18,16 @@ export default function ClimaSimple({ datos }: { datos: RespuestaClima }) {
 
   const dia = (d: typeof hoy, titulo: string) =>
     d && (
-      <div className="flex flex-1 flex-col items-center rounded-3xl border border-borde bg-tarjeta p-3 text-center">
-        <p className="text-base font-bold text-texto-suave">{titulo}</p>
-        <p aria-hidden className="my-1 text-5xl leading-none">{iconoDia(d.mm, d.prob_pct)}</p>
-        <p className="font-display text-xl font-bold leading-tight">{fraseDia(d, idioma)}</p>
-        {Math.round(d.mm ?? 0) >= 1 && <p className="text-base font-bold text-acento">{n(d.mm, 0)} mm</p>}
-        <p className="mt-1 text-base">
-          <b>{n(d.tmax_c, 0)}°</b> <span className="text-texto-suave">/ {n(d.tmin_c, 0)}°</span>
-        </p>
+      <div className="flex flex-1 items-center gap-3 rounded-2xl border border-borde bg-tarjeta p-3 shadow-suave">
+        <IconoClima tipo={iconoDia(d.mm, d.prob_pct)} className="h-14 w-14" />
+        <div className="min-w-0">
+          <p className="text-sm font-bold text-texto-suave">{titulo}</p>
+          <p className="font-display text-lg font-bold leading-tight">{fraseDia(d, idioma)}</p>
+          <p className="text-base leading-tight">
+            <b>{n(d.tmax_c, 0)}°</b> <span className="text-texto-suave">/ {n(d.tmin_c, 0)}°</span>
+            {Math.round(d.mm ?? 0) >= 1 && <b className="ml-2" style={{ color: "var(--agua-mojado-texto)" }}>{n(d.mm, 0)} mm</b>}
+          </p>
+        </div>
       </div>
     );
 
@@ -37,28 +40,30 @@ export default function ClimaSimple({ datos }: { datos: RespuestaClima }) {
             <span className="font-bold text-texto-suave">{es ? "Ahora" : "Now"}</span>
             <span className="font-display text-4xl font-bold leading-none">{n(ahora.temp_c, 0)} °C</span>
             {typeof ahora.viento_kmh === "number" && (
-              <span className="text-base text-texto-suave">
-                💨 {es ? "viento" : "wind"} {n(ahora.viento_kmh, 0)} km/h
+              <span className="inline-flex items-center gap-1.5 text-base text-texto-suave">
+                <Icono nombre="viento" /> {es ? "viento" : "wind"} {n(ahora.viento_kmh, 0)} km/h
               </span>
             )}
           </p>
         )}
-        <div className="flex gap-3">
+        <div className="grid grid-cols-2 gap-3">
           {dia(hoy, es ? "Hoy" : "Today")}
           {dia(manana, es ? "Mañana" : "Tomorrow")}
         </div>
       </section>
 
       {/* Qué conviene hacer */}
-      <section className="rounded-3xl border border-borde bg-tarjeta p-4">
-        <h2 className="font-display text-2xl font-bold">{es ? "Qué te conviene hacer" : "What to do"}</h2>
-        <ul className="mt-3 space-y-3">
+      <section className="rounded-2xl border border-borde bg-tarjeta p-4 shadow-suave">
+        <h2 className="font-display text-xl font-bold">{es ? "Qué te conviene hacer" : "What to do"}</h2>
+        <ul className="mt-3 space-y-4">
           {consejos.map((c) => (
-            <li key={c.id} className={`flex gap-3 rounded-2xl border-l-8 bg-fondo p-3 ${BORDE[c.tono]}`}>
-              <span aria-hidden className="text-3xl leading-none">{c.icono}</span>
+            <li key={c.id} className="flex gap-3">
+              <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-full ${FONDO[c.tono]}`}>
+                <Icono nombre={c.icono} className="h-6 w-6" />
+              </span>
               <div>
-                <p className="text-lg font-bold leading-snug">{c.titulo}</p>
-                <p className="mt-0.5 text-base leading-snug text-texto">{c.texto}</p>
+                <p className="text-[17px] font-bold leading-snug">{c.titulo}</p>
+                <p className="mt-0.5 text-base leading-snug text-texto-suave">{c.texto}</p>
               </div>
             </li>
           ))}
@@ -71,16 +76,16 @@ export default function ClimaSimple({ datos }: { datos: RespuestaClima }) {
       </section>
 
       {/* Próximos días */}
-      <section className="rounded-3xl border border-borde bg-tarjeta p-4">
-        <h2 className="font-display text-2xl font-bold">{es ? "Los próximos días" : "Next days"}</h2>
+      <section className="rounded-2xl border border-borde bg-tarjeta p-4 shadow-suave">
+        <h2 className="font-display text-xl font-bold">{es ? "Los próximos días" : "Next days"}</h2>
         <ul className="mt-2 divide-y divide-borde">
           {dias.map((d, i) => (
-            <li key={d.fecha} className="flex items-center gap-3 py-2 text-lg">
-              <span className="w-20 shrink-0 font-bold capitalize">{i === 0 ? (es ? "Hoy" : "Today") : diaCorto(d.fecha)}</span>
-              <span aria-hidden className="text-3xl leading-none">{iconoDia(d.mm, d.prob_pct)}</span>
+            <li key={d.fecha} className="flex items-center gap-2.5 py-1.5 text-base">
+              <span className="w-16 shrink-0 font-bold capitalize">{i === 0 ? (es ? "Hoy" : "Today") : diaCorto(d.fecha)}</span>
+              <IconoClima tipo={iconoDia(d.mm, d.prob_pct)} className="h-9 w-9" />
               <span className="flex-1 leading-tight">
                 {fraseDia(d, idioma)}
-                {Math.round(d.mm ?? 0) >= 1 && <b className="text-acento"> · {n(d.mm, 0)} mm</b>}
+                {Math.round(d.mm ?? 0) >= 1 && <b style={{ color: "var(--agua-mojado-texto)" }}> {n(d.mm, 0)} mm</b>}
               </span>
               <span className="shrink-0 whitespace-nowrap">
                 <b>{n(d.tmax_c, 0)}°</b> <span className="text-texto-suave">{n(d.tmin_c, 0)}°</span>
