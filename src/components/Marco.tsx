@@ -7,7 +7,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import { CULTIVOS } from "./cultivos";
+import { Dibujo, type NombreDibujo } from "./Icono";
 import { useIdioma, type Clave, type Idioma } from "./idioma";
+import InstalarApp from "./InstalarApp";
 import Logo, { MarcaAgroSAR } from "./Logo";
 import { useTema } from "./tema";
 
@@ -47,11 +49,11 @@ function Icono({ children, className = "h-6 w-6" }: { children: ReactNode; class
   );
 }
 
-const PESTANAS: { href: string; clave: Clave; icono: ReactNode }[] = [
-  { href: "/", clave: "navCultivos", icono: ICONOS.inicio },
-  { href: "/suelo", clave: "navSuelo", icono: ICONOS.suelo },
-  { href: "/chacras", clave: "navChacras", icono: ICONOS.chacras },
-  { href: "/clima", clave: "navClima", icono: ICONOS.clima },
+const PESTANAS: { href: string; clave: Clave; icono: ReactNode; dibujo: NombreDibujo }[] = [
+  { href: "/", clave: "navCultivos", icono: ICONOS.inicio, dibujo: "brote" },
+  { href: "/suelo", clave: "navSuelo", icono: ICONOS.suelo, dibujo: "suelo-bueno" },
+  { href: "/chacras", clave: "navChacras", icono: ICONOS.chacras, dibujo: "campo" },
+  { href: "/clima", clave: "navClima", icono: ICONOS.clima, dibujo: "clima-parcial" },
 ];
 
 export default function Marco({
@@ -60,21 +62,26 @@ export default function Marco({
   cultivo,
   className = "",
   style,
+  fondo,
 }: {
   children: ReactNode;
   variante?: "inicio" | "compacta";
   cultivo?: string; // cultivo elegido (se muestra en la barra compacta y se marca en el menú)
   className?: string;
   style?: CSSProperties;
+  /** Fondo fijo detrás de todo (p. ej. FondoCultivoScroll). El contenido se apila por encima. */
+  fondo?: ReactNode;
 }) {
   const { t, tr } = useIdioma();
   const [abierto, setAbierto] = useState(false);
   const actual = CULTIVOS.find((c) => c.id === cultivo);
+  const sobreFondo = fondo ? "z-[1]" : "";
 
   return (
     <div className={`flex flex-1 flex-col ${className}`} style={style}>
+      {fondo}
       <header
-        className={`relative mx-auto flex w-full max-w-6xl items-center px-3 sm:px-8 ${
+        className={`relative mx-auto flex w-full max-w-6xl items-center px-3 sm:px-8 ${sobreFondo} ${
           variante === "inicio" ? "justify-center pt-4 md:pt-7" : "justify-between gap-3 py-2 md:py-3"
         }`}
       >
@@ -112,7 +119,9 @@ export default function Marco({
         )}
       </header>
 
-      <main className={`mx-auto flex w-full max-w-6xl flex-1 flex-col pb-24 md:pb-28 ${variante === "inicio" ? "px-4 pt-6 sm:px-8" : ""}`}>
+      <main
+        className={`mx-auto flex w-full max-w-6xl flex-1 flex-col pb-24 md:pb-28 ${fondo ? "relative z-[1]" : ""} ${variante === "inicio" ? "px-4 pt-6 sm:px-8" : ""}`}
+      >
         {children}
       </main>
 
@@ -145,7 +154,8 @@ function BarraPestanas() {
                   activa ? "text-acento md:bg-tarjeta-2" : "text-texto-suave hover:text-acento"
                 }`}
               >
-                <Icono className={`h-6 w-6 ${activa ? "" : "opacity-80"}`}>{p.icono}</Icono>
+                {/* Dibujo del diseñador: a color en la pestaña activa, apagado en las demás */}
+                <Dibujo nombre={p.dibujo} className={`h-8 w-8 transition-[filter,opacity,transform] ${activa ? "scale-110" : "opacity-70 grayscale"}`} />
                 {t(p.clave)}
               </Link>
             </li>
@@ -171,7 +181,7 @@ function Menu({ cultivo, alCerrar }: { cultivo?: string; alCerrar: () => void })
     };
   }, [alCerrar]);
 
-  const fila = "flex min-h-14 w-full items-center gap-3 rounded-2xl px-3 text-lg font-bold";
+  const fila = "flex min-h-14 w-full items-center gap-3 rounded-xl px-3 text-lg font-bold";
   const enlaces: { href: string; clave: Clave; icono: ReactNode }[] = [...PESTANAS, { href: "/ayuda", clave: "navAyuda", icono: ICONOS.ayuda }];
 
   return (
@@ -231,6 +241,8 @@ function Menu({ cultivo, alCerrar }: { cultivo?: string; alCerrar: () => void })
           })}
         </ul>
 
+        <InstalarApp className="mt-5 px-1" />
+
         <h2 className="mt-6 px-3 text-sm font-bold text-texto-suave">{t("ajustes")}</h2>
         <div className="mt-1 space-y-2 px-1">
           <div className="grid grid-cols-2 gap-2" role="group" aria-label={t("idioma")}>
@@ -240,7 +252,7 @@ function Menu({ cultivo, alCerrar }: { cultivo?: string; alCerrar: () => void })
                 type="button"
                 onClick={() => setIdioma(i)}
                 aria-pressed={idioma === i}
-                className={`h-12 rounded-2xl border-2 text-base font-bold ${
+                className={`h-12 rounded-xl border-2 text-base font-bold ${
                   idioma === i ? "border-primario bg-tarjeta-2 text-acento" : "border-borde text-texto"
                 }`}
               >
@@ -253,7 +265,7 @@ function Menu({ cultivo, alCerrar }: { cultivo?: string; alCerrar: () => void })
             role="switch"
             aria-checked={tema === "dark"}
             onClick={alternar}
-            className="flex h-12 w-full items-center justify-between rounded-2xl border-2 border-borde px-4 text-base font-bold"
+            className="flex h-12 w-full items-center justify-between rounded-xl border-2 border-borde px-4 text-base font-bold"
           >
             {t("modoOscuro")}
             <span className={`relative h-7 w-12 rounded-full transition-colors ${tema === "dark" ? "bg-primario" : "bg-borde"}`}>

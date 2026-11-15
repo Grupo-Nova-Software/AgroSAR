@@ -13,7 +13,7 @@ export default function VistaAyuda() {
     { clave: "ayudaAmarillo", color: "var(--dorado)" },
     { clave: "ayudaRojo", color: "var(--peligro)" },
   ];
-  const tarjeta = "rounded-3xl border border-borde bg-tarjeta p-5";
+  const tarjeta = "rounded-2xl border border-borde bg-tarjeta p-5";
 
   return (
     <Marco variante="compacta">
@@ -30,7 +30,7 @@ export default function VistaAyuda() {
               </li>
             ))}
           </ol>
-          <Link href="/" className="mt-4 inline-flex h-12 items-center rounded-2xl bg-primario px-5 text-lg font-bold text-sobre-primario">
+          <Link href="/" className="mt-4 inline-flex h-12 items-center rounded-xl bg-primario px-5 text-lg font-bold text-sobre-primario">
             {t("navCultivos")}
           </Link>
         </section>
@@ -54,8 +54,8 @@ export default function VistaAyuda() {
           <div className="mt-3 space-y-3 text-lg leading-relaxed">
             <p>{t("ayudaDatos1")}</p>
             <p>{t("ayudaDatos2")}</p>
-            <p>📵 {t("ayudaSinInternet")}</p>
-            <p className="rounded-2xl bg-dorado/20 px-4 py-3 font-bold">{t("ayudaDatos3")}</p>
+            <p>{t("ayudaSinInternet")}</p>
+            <p className="rounded-xl bg-dorado/20 px-4 py-3 font-bold">{t("ayudaDatos3")}</p>
             <p className="text-base text-texto-suave">{t("ayudaFuentes")}</p>
             <p className="text-base text-texto-suave">{t("pie")}</p>
           </div>

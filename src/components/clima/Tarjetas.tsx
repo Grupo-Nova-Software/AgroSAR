@@ -17,7 +17,7 @@ const TONO_SEQUIA: Record<NivelSequia, Tono> = { optimo: "bien", atencion: "avis
 function Tarjeta({ pregunta, titular, tono, children }: { pregunta: string; titular: string; tono: Tono; children: ReactNode }) {
   const t = TONO[tono];
   return (
-    <section className={`flex flex-col rounded-3xl border-2 bg-tarjeta p-4 ${t.borde}`}>
+    <section className={`flex flex-col rounded-2xl border-2 bg-tarjeta p-4 ${t.borde}`}>
       <h2 className="text-sm font-bold uppercase tracking-wide text-texto-suave">{pregunta}</h2>
       <p className="mt-1 flex items-start gap-2 font-display text-2xl font-bold leading-tight text-texto">
         <span aria-hidden className={`mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full border-2 text-base ${t.borde}`}>{t.icono}</span>

@@ -20,7 +20,7 @@ export function MarcaAgroSAR({ className = "h-8 w-8", sobreVerde = false }: { cl
 export default function Logo({ grande = false }: { grande?: boolean }) {
   return (
     <span
-      className={`inline-flex items-center gap-2 rounded-2xl bg-primario text-sobre-primario shadow-suave ${
+      className={`inline-flex items-center gap-2 rounded-xl bg-primario text-sobre-primario shadow-suave ${
         grande ? "px-5 py-2.5 md:px-7 md:py-3" : "px-3.5 py-1.5"
       }`}
     >

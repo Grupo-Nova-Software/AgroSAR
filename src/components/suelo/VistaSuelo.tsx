@@ -8,8 +8,11 @@ import { useEffect, useRef, useState } from "react";
 import type { EstadoRecomendacion, IndiceHumedad, SerieHumedad } from "@/types/contratos";
 import { claveDe, useChacras } from "../chacras";
 import { CULTIVOS } from "../cultivos";
+import { FondoGlobal } from "../FondoCultivoScroll";
 import { useIdioma } from "../idioma";
+import Icono from "../Icono";
 import Marco from "../Marco";
+import { useCultivoGuardado, useZonaGuardada } from "../preferencias";
 import {
   dentroDe, hectareasDe, pedirAnalisis, pedirEstados, pedirUmbrales,
   UMBRALES_DEFECTO, type Analisis, type LonLat, type UmbralesHumedad,
@@ -38,12 +41,17 @@ export default function VistaSuelo({
   const { chacras, cargadas, agregar, actualizar, borrar } = useChacras();
   const { pendientes, enLinea } = useResultados(chacras, actualizar);
 
+  // Cultivo y zona compartidos con Inicio y Clima: la URL manda; sin parámetros, el último elegido.
+  const [cultivoGuardado, guardarCultivo] = useCultivoGuardado();
+  const [zonaGuardada, guardarZona] = useZonaGuardada();
+
   // Chacra a mostrar: la pedida en la URL; si no, la primera que siembra el cultivo elegido.
   const cultivoUrl = CULTIVOS.find((c) => c.id === cultivoParam)?.id;
+  const cultivoElegido = cultivoUrl ?? cultivoGuardado ?? undefined;
   const chacra =
     chacras.find((c) => c.id === chacraParam) ??
-    (chacraParam === "ninguna" || areaParam ? undefined : chacras.find((c) => !cultivoUrl || c.cultivo === cultivoUrl));
-  const cultivo: Cultivo = chacra?.cultivo ?? cultivoUrl ?? "soja";
+    (chacraParam === "ninguna" || areaParam ? undefined : chacras.find((c) => !cultivoElegido || c.cultivo === cultivoElegido));
+  const cultivo: Cultivo = chacra?.cultivo ?? cultivoElegido ?? "soja";
   const cultivoCfg = CULTIVOS.find((c) => c.id === cultivo)!;
 
   const [areas, setAreas] = useState<SerieHumedad[]>([]);
@@ -52,7 +60,18 @@ export default function VistaSuelo({
   const [analisis, setAnalisis] = useState<{ clave: string; datos: Analisis } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [recienGuardada, setRecienGuardada] = useState<string | null>(null);
-  const areaId = (areaParam && areas.some((a) => a.id === areaParam) ? areaParam : areas[0]?.id) ?? "";
+  const valida = (z: string | null | undefined) => !!z && areas.some((a) => a.id === z);
+  const areaId = (valida(areaParam) ? areaParam : valida(zonaGuardada) ? zonaGuardada : areas[0]?.id) ?? "";
+
+  // Lo que el usuario elige acá (cultivo o chacra en la URL, zona) pasa a Inicio y Clima.
+  const eligioCultivo = !!(cultivoUrl || (chacraParam && chacra));
+  useEffect(() => {
+    if (eligioCultivo) guardarCultivo(cultivo);
+  }, [eligioCultivo, cultivo, guardarCultivo]);
+  useEffect(() => {
+    if (areaParam && valida(areaParam)) guardarZona(areaParam);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `valida` depende de `areas`
+  }, [areaParam, areas, guardarZona]);
 
   const ir = (p: Record<string, string>) => router.replace(`/suelo?${new URLSearchParams(p).toString()}`, { scroll: false });
   const elegirZona = (id: string) => ir({ cultivo, area: id, chacra: "ninguna" });
@@ -149,15 +168,15 @@ export default function VistaSuelo({
 
   const avisoChacra = chacra && (
     <>
-      {chacra.id === recienGuardada && <p className="mt-2 rounded-2xl bg-primario px-4 py-3 text-lg font-bold text-sobre-primario">{t("chacraGuardada")}</p>}
+      {chacra.id === recienGuardada && <p className="mt-2 rounded-xl bg-primario px-4 py-3 text-lg font-bold text-sobre-primario">{t("chacraGuardada")}</p>}
       {!enLinea && res && (
-        <p className="mt-2 rounded-2xl bg-dorado/25 px-4 py-2 text-base font-bold">
-          📵 {t("sinConexion")} {t("guardadoEl", { fecha: fecha(res.consultado.slice(0, 10), true) })}
+        <p className="mt-2 rounded-xl bg-dorado/25 px-4 py-2 text-base font-bold">
+          {t("sinConexion")} {t("guardadoEl", { fecha: fecha(res.consultado.slice(0, 10), true) })}
         </p>
       )}
-      {!enLinea && !res && <p className="mt-2 rounded-2xl bg-dorado/25 px-4 py-2 text-base font-bold">📵 {t("sinResultado")}</p>}
+      {!enLinea && !res && <p className="mt-2 rounded-xl bg-dorado/25 px-4 py-2 text-base font-bold">{t("sinResultado")}</p>}
       {enLinea && pendientes.has(chacra.id) && res && !resActual && <p className="mt-2 text-base font-bold text-texto-suave">{t("actualizando")}</p>}
-      {chacraSinDatoReal && <p className="mt-2 rounded-2xl bg-dorado/25 px-4 py-2 text-base font-bold">{t("sinDatosAqui")}</p>}
+      {chacraSinDatoReal && <p className="mt-2 rounded-xl bg-dorado/25 px-4 py-2 text-base font-bold">{t("sinDatosAqui")}</p>}
     </>
   );
 
@@ -167,7 +186,7 @@ export default function VistaSuelo({
       <select
         value={areaId}
         onChange={(e) => elegirZona(e.target.value)}
-        className="h-12 min-w-0 flex-1 rounded-xl border-2 border-borde bg-fondo px-3 text-base font-bold text-texto"
+        className="h-12 min-w-0 flex-1 rounded-xl border border-borde bg-tarjeta-2 px-3 text-base font-bold text-texto"
       >
         {areas.map((a) => (
           <option key={a.id} value={a.id}>
@@ -181,7 +200,7 @@ export default function VistaSuelo({
   const serieGrafico = chacra ? (res?.serie?.length ? res.serie : null) : (area?.serie ?? null);
 
   return (
-    <Marco variante="compacta" cultivo={cultivo}>
+    <Marco variante="compacta" cultivo={cultivo} fondo={<FondoGlobal cultivo={cultivo} zona={areaId || zonaGuardada} />}>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-5 md:gap-5 md:px-8">
         <div className="min-w-0 md:col-span-3">
           {areas.length && cargadas ? (
@@ -198,14 +217,14 @@ export default function VistaSuelo({
               alUbicar={alUbicar}
             />
           ) : (
-            <div className="grid h-[62svh] min-h-[22rem] place-items-center bg-tarjeta text-lg text-texto-suave md:h-[34rem] md:rounded-3xl">
+            <div className="grid h-[62svh] min-h-[22rem] place-items-center bg-tarjeta text-lg text-texto-suave md:h-[34rem] md:rounded-2xl">
               {t("cargando")}
             </div>
           )}
         </div>
 
         <div ref={refResultado} className="min-w-0 scroll-mt-3 space-y-4 px-3 md:col-span-2 md:px-0">
-          {error && enLinea && <p className="rounded-2xl bg-peligro/15 px-4 py-3 text-base font-bold text-peligro">Error: {error}</p>}
+          {error && enLinea && <p className="rounded-xl bg-peligro/15 px-4 py-3 text-base font-bold text-peligro">Error: {error}</p>}
 
           {chacra ? (
             <Consejo
@@ -232,14 +251,14 @@ export default function VistaSuelo({
               <Consejo titulo={`${t("zonaDe")} ${area?.zona ?? ""}`} analisis={analisisZona} umbrales={u} cultivo={enFrase}>
                 {selectorZona}
               </Consejo>
-              <p className="px-1 text-base text-texto-suave">👆 {chacras.length ? t("elegirChacra") : t("pistaChacra")}</p>
+              <p className="px-1 text-sm text-texto-suave">{chacras.length ? t("elegirChacra") : t("pistaChacra")}</p>
             </>
           )}
         </div>
 
-        <section className="mx-3 min-w-0 rounded-3xl border border-borde bg-tarjeta p-4 md:col-span-5 md:mx-0 md:p-5">
-          <h2 className="font-display text-2xl font-bold">{t("graficoTitulo")}</h2>
-          <p className="mt-1 text-base text-texto-suave">{t("graficoSub", { cultivo: enFrase })}</p>
+        <section className="mx-3 min-w-0 rounded-2xl border border-borde bg-tarjeta px-3 py-4 shadow-suave md:col-span-5 md:mx-0 md:p-5">
+          <h2 className="px-1 font-display text-xl font-bold">{t("graficoTitulo")}</h2>
+          <p className="mt-0.5 px-1 text-sm text-texto-suave">{t("graficoSub", { cultivo: enFrase })}</p>
           <div className="mt-3">
             {serieGrafico ? <GraficoHumedad serie={serieGrafico} umbrales={u} /> : <p className="text-base text-texto-suave">{t("cargando")}</p>}
           </div>
@@ -253,7 +272,8 @@ export default function VistaSuelo({
           onClick={bajarAlResultado}
           className="fixed inset-x-4 bottom-[5.5rem] z-[1200] mx-auto flex h-14 max-w-sm items-center justify-center gap-2 rounded-full bg-primario px-5 text-lg font-bold text-sobre-primario shadow-2xl md:bottom-24"
         >
-          ↓ {chacra ? t("verResultado") : t("verConsejo")}
+          <Icono nombre="abajo" />
+          {chacra ? t("verResultado") : t("verConsejo")}
         </button>
       )}
     </Marco>

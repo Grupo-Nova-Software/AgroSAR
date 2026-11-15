@@ -26,7 +26,7 @@ export default function DetalleHorario({ datos }: { datos: RespuestaClima }) {
   const cabeza = "sticky left-0 z-10 bg-tarjeta pr-2 text-left text-sm font-bold text-texto-suave";
 
   return (
-    <section className="rounded-3xl border border-borde bg-tarjeta p-4">
+    <section className="rounded-2xl border border-borde bg-tarjeta p-4">
       <h2 className="font-display text-2xl font-bold">{tc("horasTitulo")}</h2>
       <p className="text-base text-texto-suave">{tc("horasSub")}</p>
       <div className="slider-sin-barra relative mt-3 overflow-x-auto" tabIndex={0} role="region" aria-label={tc("horasTitulo")}>

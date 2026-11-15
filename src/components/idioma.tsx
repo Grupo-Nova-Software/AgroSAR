@@ -19,6 +19,25 @@ const TEXTOS = {
   },
   cargando: { es: "Cargando…", en: "Loading…" },
 
+  // Inicio: historia "Del cielo a la raíz" (acompaña al fondo que baja con el scroll)
+  historiaTitulo: { es: "Del cielo a la raíz", en: "From sky to root" },
+  historiaBajar: { es: "Bajá para ver qué pasa con el agua debajo de tu cultivo.", en: "Scroll down to see what happens to the water below your crop." },
+  capaCieloTitulo: { es: "El cielo", en: "The sky" },
+  capaCieloTexto: {
+    es: "Lluvia, calor y viento. El pronóstico es de Open-Meteo (un modelo, no es dato de NASA) y la lluvia de los últimos días, de NASA POWER.",
+    en: "Rain, heat and wind. The forecast comes from Open-Meteo (a model, not NASA data) and recent rain from NASA POWER.",
+  },
+  capaSuperficieTitulo: { es: "La superficie: 0 a 5 cm", en: "The surface: 0 to 5 cm" },
+  capaSuperficieTexto: {
+    es: "El radar NISAR (NASA-ISRO) mide el agua en los primeros centímetros del suelo, en cuadros de 200 m. Es un dato nuevo y todavía provisional.",
+    en: "The NISAR radar (NASA-ISRO) measures the water in the top few centimeters of soil, in 200 m squares. It is new and still provisional data.",
+  },
+  capaRaizTitulo: { es: "Las raíces", en: "The roots" },
+  capaRaizTexto: {
+    es: "Las raíces toman agua más abajo, donde el radar no llega. Por eso AgroSAR te da una orientación, no una medición: mirá también tu suelo.",
+    en: "Roots take water from deeper down, where the radar cannot reach. That is why AgroSAR gives you guidance, not a measurement: check your soil too.",
+  },
+
   // Menú y navegación
   menu: { es: "Menú", en: "Menu" },
   cerrar: { es: "Cerrar", en: "Close" },
@@ -81,6 +100,8 @@ const TEXTOS = {
   marcarPrimera: { es: "Marcar mi primera chacra", en: "Mark my first field" },
   verEnMapa: { es: "Ver en el mapa", en: "See on the map" },
   nombreChacra: { es: "Nombre de la chacra", en: "Field name" },
+  editarChacra: { es: "Editar esta chacra", en: "Edit this field" },
+  colorChacra: { es: "Color en el mapa", en: "Colour on the map" },
   renombrar: { es: "Cambiar nombre", en: "Rename" },
   queSiembra: { es: "¿Qué sembrás acá?", en: "What do you sow here?" },
   borrarChacra: { es: "Borrar esta chacra", en: "Delete this field" },
@@ -96,7 +117,7 @@ const TEXTOS = {
     es: "{s} para sembrar · {e} esperar · {p} no sembrar",
     en: "{s} to sow · {e} wait · {p} don't sow",
   },
-  chacraGuardada: { es: "¡Chacra guardada! Mirá cómo está 👇", en: "Field saved! See how it is 👇" },
+  chacraGuardada: { es: "¡Chacra guardada! Mirá cómo está abajo.", en: "Field saved! See how it is below." },
   verResultado: { es: "Ver cómo está mi chacra", en: "See how my field is" },
   verConsejo: { es: "Ver qué me conviene", en: "See what to do" },
   elegirChacra: { es: "Tocá una chacra en el mapa para ver cómo está.", en: "Tap a field on the map to see how it is." },

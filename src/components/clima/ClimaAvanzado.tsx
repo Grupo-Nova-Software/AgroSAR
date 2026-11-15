@@ -14,7 +14,7 @@ import { useClimaTextos } from "./textos";
 // Leaflet usa `window`: el mapa se carga solo en el navegador.
 const MapaClima = dynamic(() => import("./MapaClima"), {
   ssr: false,
-  loading: () => <div className="h-[68svh] min-h-[26rem] w-full animate-pulse bg-tarjeta-2 md:h-[36rem] md:rounded-3xl" />,
+  loading: () => <div className="h-[68svh] min-h-[26rem] w-full animate-pulse bg-tarjeta-2 md:h-[36rem] md:rounded-2xl" />,
 });
 
 export default function ClimaAvanzado({
@@ -57,7 +57,7 @@ export default function ClimaAvanzado({
         <BalanceHidrico datos={datos} />
         <Perspectiva datos={datos} />
 
-        <section className="rounded-3xl border border-borde bg-tarjeta p-4">
+        <section className="rounded-2xl border border-borde bg-tarjeta p-4">
           <h2 className="font-display text-2xl font-bold">{tc("nodosTitulo")}</h2>
           <p className="mt-1 text-base leading-snug">{tc("nodosTexto")}</p>
           {grilla && (
@@ -71,7 +71,7 @@ export default function ClimaAvanzado({
           )}
         </section>
 
-        <footer className="rounded-3xl border border-borde bg-tarjeta p-4 text-sm leading-relaxed text-texto-suave">
+        <footer className="rounded-2xl border border-borde bg-tarjeta p-4 text-sm leading-relaxed text-texto-suave">
           <h2 className="text-base font-bold text-texto">{tc("fuentesTitulo")}</h2>
           <ul className="mt-1 list-disc space-y-0.5 pl-5">
             {datos.fuentes.map((f) => (

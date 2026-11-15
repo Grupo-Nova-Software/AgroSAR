@@ -2,6 +2,7 @@
 // Los próximos meses de la campaña: lluvia NORMAL de cada mes (climatología NASA POWER) y en qué etapa estaría el cultivo.
 // Es la normal histórica, NO un pronóstico: se dice arriba y en cada lectura.
 import type { RespuestaClima } from "@/lib/clima/tipos";
+import Icono from "../Icono";
 import { useClimaTextos } from "./textos";
 
 export default function Perspectiva({ datos }: { datos: RespuestaClima }) {
@@ -14,13 +15,13 @@ export default function Perspectiva({ datos }: { datos: RespuestaClima }) {
   const a = p.mes_actual;
 
   return (
-    <section className="rounded-3xl border border-borde bg-tarjeta p-4">
+    <section className="rounded-2xl border border-borde bg-tarjeta p-4">
       <h2 className="font-display text-2xl font-bold">{tc("perspTitulo")}</h2>
       <p className="text-base text-texto-suave">{tc("perspSub", { periodo })}</p>
 
       <ol className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
         {p.meses.map((m) => (
-          <li key={m.mes} className={`rounded-2xl border-2 bg-fondo p-3 ${m.mes === p.mes_mas_vulnerable ? "border-dorado" : "border-borde"}`}>
+          <li key={m.mes} className={`rounded-xl border-2 bg-fondo p-3 ${m.mes === p.mes_mas_vulnerable ? "border-dorado" : "border-borde"}`}>
             <p className="font-display text-xl font-bold capitalize">{mes(m.mes)}</p>
             <p className="mt-1 text-sm text-texto-suave">{tc("normalMes")}</p>
             <p className="font-display text-2xl font-bold">{n(m.normal_mm)} mm</p>
@@ -31,7 +32,7 @@ export default function Perspectiva({ datos }: { datos: RespuestaClima }) {
             <ul className="mt-2 space-y-1 text-sm">
               {m.etapas.map((e) => (
                 <li key={e.id} className={e.critica_agua ? "font-bold" : ""}>
-                  {e.critica_agua ? "💧 " : "· "}
+                  {e.critica_agua ? <Icono nombre="gota" className="mr-1 h-4 w-4 align-[-2px]" /> : "· "}
                   {etapa(e.nombre)}
                   {e.critica_agua && <span className="block text-xs font-normal text-texto-suave">{tc("etapaCritica")}</span>}
                 </li>

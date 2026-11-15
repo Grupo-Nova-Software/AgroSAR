@@ -2,6 +2,7 @@
 // Reglas de color: magnitud = UN solo tono de claro a oscuro; el balance (falta / sobra) = dos tonos con gris al medio;
 // la temperatura = frío azul / calor rojo con neutro al medio. Nada de arcoíris.
 import type { GrillaClima } from "@/lib/clima/tipos";
+import type { NombreIcono } from "../Icono";
 
 export type CapaId = "lluvia" | "acumulada" | "temperatura" | "helada" | "balance" | "viento" | "solar";
 export type Modo = "h" | "d";
@@ -63,14 +64,14 @@ export const ESCALAS: Record<CapaId, Record<Modo, Escala>> = {
   },
 };
 
-export const CAPAS: { id: CapaId; icono: string }[] = [
-  { id: "lluvia", icono: "🌧️" },
-  { id: "acumulada", icono: "💧" },
-  { id: "temperatura", icono: "🌡️" },
-  { id: "helada", icono: "❄️" },
-  { id: "balance", icono: "⚖️" },
-  { id: "viento", icono: "💨" },
-  { id: "solar", icono: "☀️" },
+export const CAPAS: { id: CapaId; icono: NombreIcono }[] = [
+  { id: "lluvia", icono: "lluvia" },
+  { id: "acumulada", icono: "gota" },
+  { id: "temperatura", icono: "termometro" },
+  { id: "helada", icono: "copo" },
+  { id: "balance", icono: "balanza" },
+  { id: "viento", icono: "viento" },
+  { id: "solar", icono: "sol" },
 ];
 
 const hex = (c: string): [number, number, number] => [parseInt(c.slice(1, 3), 16), parseInt(c.slice(3, 5), 16), parseInt(c.slice(5, 7), 16)];
