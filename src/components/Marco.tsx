@@ -128,17 +128,20 @@ function BarraPestanas() {
   return (
     <nav
       aria-label={t("menu")}
-      className="fixed inset-x-0 bottom-0 z-[1000] border-t border-borde bg-barra pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:inset-x-auto md:bottom-5 md:left-1/2 md:-translate-x-1/2 md:rounded-full md:border md:px-2 md:shadow-suave"
+      // En md+ es una píldora: w-max para que el ancho lo dé el contenido (left-1/2 lo limitaba a la mitad
+      // de la pantalla) y padding simétrico para que la pestaña activa quede pareja con el borde curvo.
+      className="fixed inset-x-0 bottom-0 z-[1000] border-t border-borde bg-barra pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:inset-x-auto md:bottom-5 md:left-1/2 md:w-max md:max-w-[calc(100vw-2rem)] md:-translate-x-1/2 md:rounded-full md:border md:p-1.5 md:shadow-suave"
     >
-      <ul className="mx-auto flex max-w-md justify-around md:gap-1">
+      {/* max-w-md solo en móvil: en la píldora cortaba "Clima" (los 4 ítems miden más de 448 px). */}
+      <ul className="mx-auto flex max-w-md justify-around md:max-w-none md:items-center md:gap-1">
         {PESTANAS.map((p) => {
           const activa = p.href === "/" ? ruta === "/" : ruta.startsWith(p.href);
           return (
-            <li key={p.href} className="flex-1 md:flex-none">
+            <li key={p.href} className="min-w-0 flex-1 md:flex-none">
               <Link
                 href={p.href}
                 aria-current={activa ? "page" : undefined}
-                className={`flex flex-col items-center gap-0.5 px-1 py-2 text-[13px] font-bold transition-colors md:flex-row md:gap-2 md:rounded-full md:px-5 md:text-sm ${
+                className={`flex flex-col items-center gap-0.5 whitespace-nowrap px-1 py-2 text-xs font-bold transition-colors sm:text-[13px] md:flex-row md:gap-2 md:rounded-full md:px-4 md:text-sm ${
                   activa ? "text-acento md:bg-tarjeta-2" : "text-texto-suave hover:text-acento"
                 }`}
               >
