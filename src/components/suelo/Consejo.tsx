@@ -4,7 +4,7 @@
 // así salen cortos y en el idioma elegido. El agua se muestra en % (0,22 m³/m³ = 22 % del volumen del suelo).
 import Link from "next/link";
 import type { ReactNode } from "react";
-import Icono from "../Icono";
+import Icono, { Dibujo } from "../Icono";
 import { useIdioma, type Clave } from "../idioma";
 import type { Analisis, UmbralesHumedad } from "./api";
 
@@ -130,10 +130,13 @@ export default function Consejo({
             <div className="absolute -top-1.5 h-6 w-6 -translate-x-1/2 rounded-full border-[3px] border-white bg-texto shadow-md" style={{ left: pos(h.media_m3m3) }} />
           )}
         </div>
-        <div className="mt-1.5 flex justify-between text-sm text-texto-suave">
-          <span>{t("seco")}</span>
-          <span>{t("bueno")}</span>
-          <span>{t("mojado")}</span>
+        <div className="mt-2 grid grid-cols-3 items-end text-sm text-texto-suave">
+          {([["seco", "suelo-seco", "text-left"], ["bueno", "suelo-bueno", "text-center"], ["mojado", "suelo-mojado", "text-right"]] as const).map(([k, d, alin]) => (
+            <span key={k} className={`flex flex-col gap-0.5 ${k === "seco" ? "items-start" : k === "bueno" ? "items-center" : "items-end"} ${alin} ${tonoAgua === k ? "font-bold text-texto" : ""}`}>
+              <Dibujo nombre={d} className={`h-9 w-9 ${tonoAgua === k ? "" : "opacity-55 grayscale-[.4]"}`} />
+              {t(k)}
+            </span>
+          ))}
         </div>
         {h.tendencia && h.estado !== "sin_datos" && <p className="mt-1 text-sm text-texto-suave">{t(`tend_${h.tendencia}` as Clave)}</p>}
       </div>

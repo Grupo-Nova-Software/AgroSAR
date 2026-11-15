@@ -7,6 +7,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import { CULTIVOS } from "./cultivos";
+import { Dibujo, type NombreDibujo } from "./Icono";
 import { useIdioma, type Clave, type Idioma } from "./idioma";
 import Logo, { MarcaAgroSAR } from "./Logo";
 import { useTema } from "./tema";
@@ -47,11 +48,11 @@ function Icono({ children, className = "h-6 w-6" }: { children: ReactNode; class
   );
 }
 
-const PESTANAS: { href: string; clave: Clave; icono: ReactNode }[] = [
-  { href: "/", clave: "navCultivos", icono: ICONOS.inicio },
-  { href: "/suelo", clave: "navSuelo", icono: ICONOS.suelo },
-  { href: "/chacras", clave: "navChacras", icono: ICONOS.chacras },
-  { href: "/clima", clave: "navClima", icono: ICONOS.clima },
+const PESTANAS: { href: string; clave: Clave; icono: ReactNode; dibujo: NombreDibujo }[] = [
+  { href: "/", clave: "navCultivos", icono: ICONOS.inicio, dibujo: "nav-inicio" },
+  { href: "/suelo", clave: "navSuelo", icono: ICONOS.suelo, dibujo: "nav-suelo" },
+  { href: "/chacras", clave: "navChacras", icono: ICONOS.chacras, dibujo: "nav-chacras" },
+  { href: "/clima", clave: "navClima", icono: ICONOS.clima, dibujo: "nav-clima" },
 ];
 
 export default function Marco({
@@ -145,7 +146,8 @@ function BarraPestanas() {
                   activa ? "text-acento md:bg-tarjeta-2" : "text-texto-suave hover:text-acento"
                 }`}
               >
-                <Icono className={`h-6 w-6 ${activa ? "" : "opacity-80"}`}>{p.icono}</Icono>
+                {/* Dibujo del diseñador: a color en la pestaña activa, apagado en las demás */}
+                <Dibujo nombre={p.dibujo} className={`h-8 w-8 transition-[filter,opacity,transform] ${activa ? "scale-110 drop-shadow-sm" : "opacity-75 grayscale"}`} />
                 {t(p.clave)}
               </Link>
             </li>

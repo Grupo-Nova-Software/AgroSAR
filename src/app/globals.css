@@ -31,13 +31,13 @@
   --fondo-mandioca: #ebcdb3;  /* cáscara / tierra colorada */
   --fondo-maiz: #f7e08a;      /* amarillo choclo */
   /* Escala del agua en el suelo: de tierra seca a verde a azul, en tonos que se funden bien entre sí */
-  --agua-seco: #c58a48;
-  --agua-bueno: #58a868;
-  --agua-mojado: #4a86c8;
-  --agua-seco-texto: #8a5416; /* los mismos tonos, más oscuros, para escribir encima de blanco */
-  --agua-bueno-texto: #1f7a3f;
-  --agua-mojado-texto: #23609f;
-  --franja-opacidad: 0.34;
+  --agua-seco: #f08a1c;       /* ámbar vivo */
+  --agua-bueno: #28b24a;      /* verde vivo */
+  --agua-mojado: #1e7df0;     /* azul vivo */
+  --agua-seco-texto: #a8540a; /* los mismos tonos, más oscuros, para escribir encima de blanco */
+  --agua-bueno-texto: #17843a;
+  --agua-mojado-texto: #1560c8;
+  --franja-opacidad: 0.42;
 }
 
 /* ---------- Modo oscuro (mismos tonos, en versión nocturna) ---------- */
@@ -61,12 +61,12 @@
   --fondo-soja: #222b12;
   --fondo-mandioca: #33221a;
   --fondo-maiz: #362b0b;
-  --agua-seco: #d98a3d;
-  --agua-bueno: #4fb369;
-  --agua-mojado: #5a94e6;
-  --agua-seco-texto: #e0a15c;
-  --agua-bueno-texto: #6cc784;
-  --agua-mojado-texto: #7fb0ee;
+  --agua-seco: #ff9a2e;
+  --agua-bueno: #3fd16a;
+  --agua-mojado: #4b9bff;
+  --agua-seco-texto: #ffb25c;
+  --agua-bueno-texto: #6fe08f;
+  --agua-mojado-texto: #8cbcff;
   --franja-opacidad: 0.22;
 }
 @media (prefers-color-scheme: dark) {
@@ -90,12 +90,12 @@
     --fondo-soja: #222b12;
     --fondo-mandioca: #33221a;
     --fondo-maiz: #362b0b;
-    --agua-seco: #d98a3d;
-    --agua-bueno: #4fb369;
-    --agua-mojado: #5a94e6;
-    --agua-seco-texto: #e0a15c;
-    --agua-bueno-texto: #6cc784;
-    --agua-mojado-texto: #7fb0ee;
+    --agua-seco: #ff9a2e;
+    --agua-bueno: #3fd16a;
+    --agua-mojado: #4b9bff;
+    --agua-seco-texto: #ffb25c;
+    --agua-bueno-texto: #6fe08f;
+    --agua-mojado-texto: #8cbcff;
   --franja-opacidad: 0.22;
   }
 }

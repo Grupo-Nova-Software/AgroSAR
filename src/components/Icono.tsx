@@ -1,6 +1,7 @@
 // Íconos propios de AgroSAR (SVG dibujados a mano en código, trazo redondeado; reemplazan a los emojis).
 // Un solo estilo para toda la app: línea de 1.8, puntas redondas, color heredado del texto.
 // `IconoClima` es la versión a color para el pronóstico (sol dorado, nube gris, gotas azules).
+import Image from "next/image";
 import type { ReactNode, SVGProps } from "react";
 
 const TRAZOS = {
@@ -105,57 +106,24 @@ export default function Icono({ nombre, className = "h-5 w-5", ...resto }: { nom
   );
 }
 
-// ---------- Pronóstico a color ----------
-export type TipoClima = "sol" | "parcial" | "llovizna" | "lluvia" | "tormenta";
+// ---------- Dibujos del diseñador (public/dibujos/*.svg, ver scripts/vectorizar_dibujos.py) ----------
+export type NombreDibujo =
+  | "brote" | "suelo-seco" | "suelo-bueno" | "suelo-mojado" | "clima-sol" | "clima-parcial" | "clima-nube" | "clima-lluvia" | "clima-tormenta"
+  | "cultivo-maiz" | "cultivo-soja" | "cultivo-mandioca" | "cultivo-espiga" | "pasto" | "arbusto"
+  | "nav-inicio" | "nav-suelo" | "nav-chacras" | "nav-clima";
 
-const SOL = "#e9a920";
-const NUBE = "var(--nube, #b8c2cc)";
-const AGUA = "var(--agua-mojado)";
-const nube = (dy = 0) => <path d={`M14 ${28 + dy}a8 8 0 0 1 .5-16 11 11 0 0 1 21 2.500 6.800 6.800 0 0 1-1.500 13.500H14Z`} fill={NUBE} />;
-const gota = (x: number, y: number, largo = 6) => <path d={`M${x} ${y}l-${largo / 2.4} ${largo}`} stroke={AGUA} strokeWidth="2.800" strokeLinecap="round" />;
+/** Un dibujo del diseñador. Son SVG livianos; `unoptimized` porque no hace falta pasarlos por el optimizador de imágenes. */
+export function Dibujo({ nombre, className = "h-12 w-12", alto = 96 }: { nombre: NombreDibujo; className?: string; alto?: number }) {
+  return <Image src={`/dibujos/${nombre}.svg`} alt="" width={alto} height={alto} unoptimized aria-hidden className={`inline-block shrink-0 object-contain ${className}`} />;
+}
+
+// ---------- Pronóstico: dibujos del clima ----------
+export type TipoClima = "sol" | "parcial" | "nube" | "llovizna" | "lluvia" | "tormenta";
+const DIBUJO_CLIMA: Record<TipoClima, NombreDibujo> = {
+  sol: "clima-sol", parcial: "clima-parcial", nube: "clima-nube", llovizna: "clima-parcial", lluvia: "clima-lluvia", tormenta: "clima-tormenta",
+};
 
 export function IconoClima({ tipo, className = "h-12 w-12" }: { tipo: TipoClima; className?: string }) {
-  return (
-    <svg viewBox="0 0 48 48" fill="none" aria-hidden className={`inline-block shrink-0 ${className}`}>
-      {tipo === "sol" && (
-        <>
-          <circle cx="24" cy="24" r="9" fill={SOL} />
-          <path d="M24 6v5M24 37v5M6 24h5M37 24h5M11.300 11.300l3.500 3.500M33.200 33.200l3.500 3.500M36.700 11.300l-3.500 3.500M14.800 33.200l-3.500 3.500" stroke={SOL} strokeWidth="3" strokeLinecap="round" />
-        </>
-      )}
-      {tipo === "parcial" && (
-        <>
-          <circle cx="31" cy="15" r="7.500" fill={SOL} />
-          <path d="M31 2.500v3M43.500 15h-3M40 6l-2.200 2.200M22 6l2.200 2.200" stroke={SOL} strokeWidth="2.600" strokeLinecap="round" />
-          <g transform="translate(-2 8)">{nube()}</g>
-        </>
-      )}
-      {tipo === "llovizna" && (
-        <>
-          <circle cx="32" cy="12" r="6.500" fill={SOL} />
-          <g transform="translate(-2 2)">{nube()}</g>
-          {gota(18, 35, 5)}
-          {gota(28, 35, 5)}
-        </>
-      )}
-      {tipo === "lluvia" && (
-        <>
-          <g transform="translate(-1 -3)">{nube()}</g>
-          {gota(15, 30)}
-          {gota(24, 30)}
-          {gota(33, 30)}
-          {gota(19, 38, 5)}
-          {gota(28, 38, 5)}
-        </>
-      )}
-      {tipo === "tormenta" && (
-        <>
-          <g transform="translate(-1 -4)" style={{ ["--nube" as string]: "#7f8b97" }}>{nube()}</g>
-          <path d="M25 26l-6 9h5l-2.500 8 8.500-11h-5l3-6h-3Z" fill={SOL} />
-          {gota(13, 30)}
-          {gota(36, 30)}
-        </>
-      )}
-    </svg>
-  );
+  // el contorno suave hace que la nube blanca se vea sobre una tarjeta blanca
+  return <Dibujo nombre={DIBUJO_CLIMA[tipo]} className={`${className} [filter:drop-shadow(0_0_1px_rgba(40,60,50,0.7))]`} />;
 }

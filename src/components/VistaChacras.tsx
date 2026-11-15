@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useChacras, type Chacra } from "./chacras";
 import { CULTIVOS } from "./cultivos";
 import { useIdioma, type Clave } from "./idioma";
-import Icono from "./Icono";
+import Icono, { Dibujo } from "./Icono";
 import Marco from "./Marco";
 import { hectareasDe } from "./suelo/api";
 import { useResultados } from "./suelo/useResultados";
@@ -59,7 +59,7 @@ export default function VistaChacras() {
 
         {cargadas && chacras.length === 0 && (
           <section className="rounded-2xl border border-borde bg-tarjeta p-6 text-center">
-            <Icono nombre="chacra" className="mx-auto h-14 w-14 text-primario" />
+            <Dibujo nombre="brote" className="mx-auto h-20 w-20" />
             <p className="mt-3 text-lg">{t("chacrasVacio")}</p>
             <Link href="/suelo?nueva=1" className="mt-4 inline-flex h-14 items-center rounded-xl bg-primario px-6 text-lg font-bold text-sobre-primario">
               {t("marcarPrimera")}

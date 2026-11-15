@@ -17,7 +17,7 @@ export interface ConsejoClima {
 /** Dibujo del día según la lluvia esperada (el pronóstico no trae nubosidad). */
 export const iconoDia = (mmDia: number | null, prob: number | null): TipoClima => {
   const mm = Math.round(mmDia ?? 0); // redondeado, igual que el número que se muestra
-  return mm >= 40 ? "tormenta" : mm >= 10 ? "lluvia" : mm >= 1 ? "llovizna" : (prob ?? 0) >= 50 ? "parcial" : "sol";
+  return mm >= 40 ? "tormenta" : mm >= 10 ? "lluvia" : mm >= 1 ? "llovizna" : (prob ?? 0) >= 50 ? "nube" : (prob ?? 0) >= 25 ? "parcial" : "sol";
 };
 
 /** Frase corta del día: "Llueve fuerte", "No llueve"… */
