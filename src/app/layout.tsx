@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Atkinson_Hyperlegible, Bricolage_Grotesque } from "next/font/google";
 import { IdiomaProvider } from "@/components/idioma";
+import RegistrarSW from "@/components/RegistrarSW";
 import { SCRIPT_TEMA, TemaProvider } from "@/components/tema";
 import "./globals.css";
 
@@ -30,6 +31,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="flex min-h-full flex-col">
         <TemaProvider>
           <IdiomaProvider>{children}</IdiomaProvider>
+          <RegistrarSW />
         </TemaProvider>
       </body>
     </html>

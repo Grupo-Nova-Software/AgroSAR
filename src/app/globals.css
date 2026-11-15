@@ -7,32 +7,34 @@
   Los componentes usan SOLO los tokens semánticos de abajo; cada modo los redefine.
 */
 
-/* ---------- Modo claro ---------- */
+/* ---------- Modo claro (pensado para usar a pleno sol: más contraste) ---------- */
 :root {
   color-scheme: light;
   --fondo: #ffffff;
-  --tarjeta: #f1f6f0;          /* verde niebla */
-  --tarjeta-2: #e5f2e8;        /* verde suave */
-  --borde: #d5e6da;
-  --texto: #343a36;            /* gris carbón */
-  --texto-suave: #5f6b63;
-  --acento: #1f5936;           /* verde profundo: textos destacados */
-  --primario: #287d45;         /* verde principal: logo, botones */
-  --primario-hover: #1f5936;
+  --tarjeta: #eef4ec;          /* verde niebla, un poco más marcado para separarse del blanco */
+  --tarjeta-2: #dfeee2;        /* verde suave */
+  --borde: #b9cfbf;            /* bordes visibles */
+  --texto: #1e2420;            /* casi negro: se lee al sol */
+  --texto-suave: #4a564e;      /* gris oscuro (contraste ≥ 7:1 sobre blanco) */
+  --acento: #1a5230;           /* verde profundo: textos destacados */
+  --primario: #237a40;         /* verde principal: logo, botones */
+  --primario-hover: #1a5230;
   --sobre-primario: #ffffff;
-  --dorado: #d9a441;           /* acentos y alertas */
-  --campo: #a9c47f;            /* indicadores secundarios */
-  --peligro: #b5472f;          /* extensión de la paleta para "precaución" */
-  --barra: rgba(255, 255, 255, 0.86);
-  --sombra: 0 6px 24px rgba(31, 89, 54, 0.12);
+  --dorado: #e0a32e;           /* "esperar": amarillo cosecha bien saturado */
+  --campo: #8fb35c;            /* indicadores secundarios */
+  --peligro: #c0392b;          /* "no siembres": rojo claro de distinguir del amarillo */
+  --barra: rgba(255, 255, 255, 0.94);
+  --sombra: 0 6px 22px rgba(20, 60, 35, 0.16);
 
   /* Fondo por cultivo (página principal) */
-  --fondo-soja: #e2ecc0;      /* verde vaina */
-  --fondo-mandioca: #ecd6c1;  /* cáscara / tierra colorada */
-  --fondo-maiz: #f8e69c;      /* amarillo choclo */
-  --agua-seco: #c9772b;       /* escala simple del agua en el suelo (gráficos y medidor) */
-  --agua-bueno: #3f9d57;
-  --agua-mojado: #2c6fd1;
+  --fondo-soja: #dbe8b3;      /* verde vaina */
+  --fondo-mandioca: #ebcdb3;  /* cáscara / tierra colorada */
+  --fondo-maiz: #f7e08a;      /* amarillo choclo */
+  /* Escala del agua en el suelo: tres colores bien distintos (gráfico, medidor, mapa) */
+  --agua-seco: #b4530f;       /* tierra seca */
+  --agua-bueno: #1f8a3c;      /* verde */
+  --agua-mojado: #1d5fc4;     /* azul */
+  --franja-opacidad: 0.3;     /* opacidad de las franjas del gráfico */
 }
 
 /* ---------- Modo oscuro (mismos tonos, en versión nocturna) ---------- */
@@ -59,6 +61,7 @@
   --agua-seco: #d98a3d;
   --agua-bueno: #4fb369;
   --agua-mojado: #5a94e6;
+  --franja-opacidad: 0.22;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -84,6 +87,7 @@
     --agua-seco: #d98a3d;
     --agua-bueno: #4fb369;
     --agua-mojado: #5a94e6;
+  --franja-opacidad: 0.22;
   }
 }
 
@@ -161,14 +165,27 @@ body {
   border: 4px solid var(--primario);
   box-shadow: 0 1px 5px rgba(0, 0, 0, 0.5);
 }
-.etiqueta-zona {
+.leaflet-tooltip.etiqueta-chacra {
+  background: rgba(0, 0, 0, 0.6);
+  border: 0;
+  border-radius: 9999px;
+  padding: 2px 10px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  box-shadow: none;
+}
+.leaflet-tooltip.etiqueta-chacra::before {
+  display: none;
+}
+.leaflet-tooltip.etiqueta-zona {
   background: rgba(0, 0, 0, 0.55);
   border: 0;
   color: #fff;
   font-weight: 700;
   box-shadow: none;
 }
-.etiqueta-zona::before {
+.leaflet-tooltip.etiqueta-zona::before {
   display: none;
 }
 
@@ -179,4 +196,9 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
+}
+
+/* Vista aérea: un poco más de color y contraste para que los lotes y caminos se distingan mejor */
+.leaflet-layer.vista-aerea {
+  filter: saturate(1.18) contrast(1.07);
 }

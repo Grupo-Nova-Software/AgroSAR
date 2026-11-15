@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 
 // Manifest PWA (rol Frontend). El ícono es src/app/icon.svg (hoja + ondas de radar).
-// TODO Frontend: service worker (public/sw.js) para que funcione sin conexión.
+// Funciona sin conexión con public/sw.js (registrado en src/components/RegistrarSW.tsx).
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "AgroSAR Itapúa",

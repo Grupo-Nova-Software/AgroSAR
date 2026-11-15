@@ -53,11 +53,14 @@ export default function GraficoHumedad({ serie, umbrales }: { serie: PuntoSerie[
       <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H} className="block h-auto w-full" role="img" aria-label={t("graficoTitulo")}>
         {franjas.map((f) => (
           <g key={f.nombre}>
-            <rect x={M.izq} width={anchoUtil} y={y(f.hasta)} height={y(f.desde) - y(f.hasta)} fill={f.color} opacity={0.18} />
+            <rect x={M.izq} width={anchoUtil} y={y(f.hasta)} height={y(f.desde) - y(f.hasta)} fill={f.color} style={{ opacity: "var(--franja-opacidad)" }} />
             <text x={M.izq - 8} y={(y(f.hasta) + y(f.desde)) / 2 + 5} textAnchor="end" fontSize={14} fontWeight={700} fill={f.color}>
               {f.nombre}
             </text>
           </g>
+        ))}
+        {[umbrales.bajo_max, umbrales.optimo_max].map((v) => (
+          <line key={v} x1={M.izq} x2={M.izq + anchoUtil} y1={y(v)} y2={y(v)} stroke="var(--texto)" strokeOpacity={0.35} strokeDasharray="5 5" />
         ))}
         {/* Eje derecho en % */}
         {[0.1, 0.2, 0.3, 0.4].map((v) => (

@@ -19,6 +19,12 @@ const ICONOS = {
       <path d="M3 21h18" />
     </>
   ),
+  chacras: (
+    <>
+      <path d="M3 9l9-5 9 5v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9Z" />
+      <path d="M3 14h18M9 20v-6M15 20v-6" />
+    </>
+  ),
   clima: (
     <>
       <path d="M7 18h10a4 4 0 0 0 0-8 6 6 0 0 0-11.6 1.5A3.5 3.5 0 0 0 7 18Z" />
@@ -44,6 +50,7 @@ function Icono({ children, className = "h-6 w-6" }: { children: ReactNode; class
 const PESTANAS: { href: string; clave: Clave; icono: ReactNode }[] = [
   { href: "/", clave: "navCultivos", icono: ICONOS.inicio },
   { href: "/suelo", clave: "navSuelo", icono: ICONOS.suelo },
+  { href: "/chacras", clave: "navChacras", icono: ICONOS.chacras },
   { href: "/clima", clave: "navClima", icono: ICONOS.clima },
 ];
 
@@ -131,7 +138,7 @@ function BarraPestanas() {
               <Link
                 href={p.href}
                 aria-current={activa ? "page" : undefined}
-                className={`flex flex-col items-center gap-0.5 px-4 py-2 text-sm font-bold transition-colors md:flex-row md:gap-2 md:rounded-full md:px-5 ${
+                className={`flex flex-col items-center gap-0.5 px-1 py-2 text-[13px] font-bold transition-colors md:flex-row md:gap-2 md:rounded-full md:px-5 md:text-sm ${
                   activa ? "text-acento md:bg-tarjeta-2" : "text-texto-suave hover:text-acento"
                 }`}
               >
