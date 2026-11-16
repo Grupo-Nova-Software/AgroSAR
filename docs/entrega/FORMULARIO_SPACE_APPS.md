@@ -27,6 +27,8 @@ Code: https://github.com/Grupo-Nova-Software/AgroSAR
 - Weather screen for all of Itapúa: today, tomorrow and the next days, plain advice, and a map with rain, temperature, wind and more.
 - The home screen summarises "today": sky, soil water measured by radar, and what to do with the chosen crop (soybean, maize or cassava).
 
+**Physical hypothesis behind the data.** Radar is sensitive to the dielectric constant: wet soil reflects more of the L-band signal back to the satellite (stronger backscatter) than dry soil, and L-band penetrates crop canopy better than shorter wavelengths. NISAR's SME2 product converts this into volumetric soil moisture; we also keep the HV backscatter (vegetation-sensitive) in each series.
+
 **How it works.**
 1. *Download:* 10 NISAR L3 SME2 granules over Itapúa (track 82), about 1.1 GB, soil moisture in m³/m³ on 200 m EASE-Grid 2.0 cells.
 2. *Clean:* keep only cells inside the real Itapúa boundary (OpenStreetMap), flagged "recommended" by NISAR (`retrievalQualityFlag`) and with less than 50% water (`waterbodyFraction`).
