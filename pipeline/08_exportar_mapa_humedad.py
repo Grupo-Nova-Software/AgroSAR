@@ -15,13 +15,17 @@ import argparse, json, math, pathlib, re, struct, zlib
 import h5py
 import numpy as np
 
+from zonas import CONTORNO, mascara_itapua
+
 RAIZ = pathlib.Path(__file__).resolve().parent.parent
 ENTRADA = RAIZ / "data" / "raw" / "sme2"
 SALIDA = RAIZ / "public" / "data" / "mapa_humedad"
 G = "science/LSAR/SME2/grids/"
 FILL = -9999
-# Departamento de Itapúa (bbox de OpenStreetMap/Nominatim, 2026-11-14)
+# Rectángulo de la imagen: el del departamento de Itapúa (se mantiene fijo para que el mapa de la app no cambie de lugar).
+# Dentro de ese rectángulo, solo se pintan las celdas que caen dentro del contorno real (config/zonas/itapua_contorno.json).
 ITAPUA = [-57.05, -27.61, -54.64, -26.09]
+assert ITAPUA[0] <= CONTORNO["bbox"][0] and ITAPUA[2] >= CONTORNO["bbox"][2], "el contorno se sale del rectángulo de la imagen"
 FUENTE = "NISAR L3 SME2 (provisional) · NASA-ISRO · ASF DAAC"
 
 # Escala de colores: (humedad m³/m³, R, G, B). Interpolación lineal entre paradas.
@@ -94,6 +98,9 @@ def main():
     y_px = y2 - (np.arange(alto) + 0.5) * (y2 - y1) / alto
     lat_px = np.degrees(2 * np.arctan(np.exp(y_px)) - np.pi / 2)
 
+    # Solo dentro del contorno real de Itapúa (fuera queda transparente)
+    en_itapua = mascara_itapua(lon_px, lat_px)
+
     fechas = []
     for ruta in archivos:
         with h5py.File(ruta, "r") as f:
@@ -109,7 +116,7 @@ def main():
         dentro_f = (lat_px <= lat.max()) & (lat_px >= lat.min())
         dentro_c = (lon_px >= lon.min()) & (lon_px <= lon.max())
         sm_px = sm[np.ix_(fi, co)]
-        ok_px = valida[np.ix_(fi, co)] & dentro_f[:, None] & dentro_c[None, :]
+        ok_px = valida[np.ix_(fi, co)] & dentro_f[:, None] & dentro_c[None, :] & en_itapua
         salida = SALIDA / f"{fecha}.png"
         escribir_png(salida, colorear(sm_px, ok_px))
         fechas.append(fecha)

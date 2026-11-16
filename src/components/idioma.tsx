@@ -50,6 +50,8 @@ const TEXTOS = {
   ajustes: { es: "Ajustes", en: "Settings" },
   idioma: { es: "Idioma", en: "Language" },
   modoOscuro: { es: "Modo oscuro", en: "Dark mode" },
+  fondoAnimado: { es: "Fondo animado", en: "Animated background" },
+  fondoAnimadoAyuda: { es: "Apagalo si la app va lenta en tu teléfono.", en: "Turn it off if the app feels slow on your phone." },
   cambiarCultivo: { es: "Cambiar cultivo", en: "Change crop" },
 
   // Mapa
@@ -83,7 +85,28 @@ const TEXTOS = {
   zona: { es: "Zona", en: "Area" },
 
   dondeEstoy: { es: "Dónde estoy", en: "Where I am" },
-  zonasConDatos: { es: "Zonas con datos", en: "Areas with data" },
+  verItapua: { es: "Todo Itapúa", en: "All Itapúa" },
+  chacraMuyGrande: {
+    es: "Eso es demasiado grande para una chacra (más de 10.000 ha). Acercá el mapa y marcá solo tu chacra.",
+    en: "That is too big for one field (over 10,000 ha). Zoom in and mark only your field.",
+  },
+  fueraItapua: {
+    es: "Eso está fuera de Itapúa. AgroSAR solo tiene datos de Itapúa.",
+    en: "That is outside Itapúa. AgroSAR only has data for Itapúa.",
+  },
+  ubicBuscando: { es: "Buscando tu ubicación… puede tardar unos segundos.", en: "Finding your location… it may take a few seconds." },
+  ubicAprox: {
+    es: "Ubicación aproximada ({margen}): no es exacta. Encendé el GPS y permití la «ubicación precisa». Las computadoras no tienen GPS.",
+    en: "Approximate location ({margen}): not exact. Turn on GPS and allow “precise location”. Computers have no GPS.",
+  },
+  ubicFuera: { es: "Estás fuera de Itapúa. El mapa muestra solo Itapúa.", en: "You are outside Itapúa. The map only shows Itapúa." },
+  ubicDenegada: {
+    es: "La app no tiene permiso para ver tu ubicación. Activalo en los ajustes del navegador y tocá de nuevo.",
+    en: "The app has no permission to see your location. Enable it in the browser settings and tap again.",
+  },
+  chacraFuera: { es: "Esta chacra está fuera de Itapúa: no hay datos para ella. Cambiá su forma o borrala.", en: "This field is outside Itapúa: there is no data for it. Change its shape or delete it." },
+  todoItapua: { es: "Todo Itapúa", en: "All of Itapúa" },
+  promedioItapua: { es: "Promedio del departamento. Marcá tu chacra para ver el dato de tu tierra.", en: "Department average. Mark your field to see the data for your land." },
   agregarOtra: { es: "Agregar otra chacra", en: "Add another field" },
   cambiarForma: { es: "Cambiar forma", en: "Change shape" },
   cancelar: { es: "Cancelar", en: "Cancel" },

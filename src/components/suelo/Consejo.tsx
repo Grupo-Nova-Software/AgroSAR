@@ -7,6 +7,7 @@ import type { ReactNode } from "react";
 import Icono, { Dibujo } from "../Icono";
 import { useIdioma, type Clave } from "../idioma";
 import type { Analisis, UmbralesHumedad } from "./api";
+import { motivoDe, tonoAguaDe } from "./motivo";
 
 const COLOR = { sembrar: "var(--primario)", esperar: "var(--dorado)", precaucion: "var(--peligro)" } as const;
 const ICONO: Record<Analisis["estado"], ReactNode> = {
@@ -36,6 +37,7 @@ export default function Consejo({
   aviso,
   children,
   pie,
+  sinDatos = false,
 }: {
   titulo: string;
   subtitulo?: string;
@@ -46,6 +48,7 @@ export default function Consejo({
   aviso?: ReactNode; // p. ej. "sin internet: dato guardado"
   children?: ReactNode;
   pie?: ReactNode; // al final de la tarjeta (editor de la chacra)
+  sinDatos?: boolean; // no hay ni habrá resultado (chacra fuera de Itapúa): no mostrar "cargando"
 }) {
   const { t, fecha, idioma } = useIdioma();
 
@@ -62,7 +65,7 @@ export default function Consejo({
         {encabezado}
         {aviso}
         {children}
-        <div className="mt-3 h-40 animate-pulse rounded-xl bg-tarjeta-2" />
+        {!sinDatos && <div className="mt-3 h-40 animate-pulse rounded-xl bg-tarjeta-2" />}
         {pie}
       </section>
     );
@@ -70,16 +73,7 @@ export default function Consejo({
 
   const h = analisis.humedad;
   const te = analisis.temporada;
-  const motivo = (() => {
-    if (h.estado === "sin_datos") return t("motivo_sin_datos");
-    if (te.estado === "fuera") return te.proxima ? t("motivo_fuera", { cultivo, fecha: fecha(te.proxima.inicio, true) }) : t("motivo_fuera_sin", { cultivo });
-    if (te.estado === "temprana") return t("motivo_temprana", { n: te.dias_fuera ?? 0 });
-    if (te.estado === "tardia") return t("motivo_tardia", { n: te.dias_fuera ?? 0 });
-    if (h.estado === "seco" || h.estado === "bajo") return t("motivo_seco");
-    if (h.estado === "saturado") return t("motivo_saturado");
-    if (te.estado === "tramo_tardio") return t("motivo_tramo", { n: te.dias_restantes ?? 0 });
-    return t("motivo_bien");
-  })();
+  const motivo = motivoDe(analisis, t, fecha, cultivo);
 
   const pct = h.media_m3m3 === null ? null : Math.round(h.media_m3m3 * 100);
   const pos = (v: number) => `${Math.min(100, Math.max(0, (v / ESCALA_MAX) * 100))}%`;
@@ -90,7 +84,7 @@ export default function Consejo({
       : [];
   const oscuro = analisis.estado === "esperar";
 
-  const tonoAgua = h.estado === "seco" || h.estado === "bajo" ? "seco" : h.estado === "optimo" ? "bueno" : "mojado";
+  const tonoAgua = tonoAguaDe(h.estado);
   // Barra del agua: los tres colores se funden de a poco (no hay un corte duro entre seco, bueno y mojado)
   const p1 = (umbrales.bajo_max / ESCALA_MAX) * 100;
   const p2 = (umbrales.optimo_max / ESCALA_MAX) * 100;

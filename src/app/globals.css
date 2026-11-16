@@ -38,6 +38,7 @@
   --agua-bueno-texto: #17843a;
   --agua-mojado-texto: #1560c8;
   --franja-opacidad: 0.42;
+  --mapa-afuera: #e7ebe4;      /* lo que queda fuera de Itapúa en los mapas */
 }
 
 /* ---------- Modo oscuro (mismos tonos, en versión nocturna) ---------- */
@@ -68,6 +69,7 @@
   --agua-bueno-texto: #6fe08f;
   --agua-mojado-texto: #8cbcff;
   --franja-opacidad: 0.22;
+  --mapa-afuera: #0f1512;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -97,6 +99,7 @@
     --agua-bueno-texto: #6fe08f;
     --agua-mojado-texto: #8cbcff;
   --franja-opacidad: 0.22;
+    --mapa-afuera: #0f1512;
   }
 }
 
@@ -164,6 +167,13 @@ body {
   background: #2b7fff;
   border: 3px solid #fff;
   box-shadow: 0 0 0 2px rgba(43, 127, 255, 0.35), 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+/* Ubicación aproximada (no es de GPS): punto hueco, para que no parezca exacta */
+.punto-ubicacion.aprox {
+  background: rgba(43, 127, 255, 0.25);
+  border-style: dashed;
+  border-color: #2b7fff;
+  box-shadow: none;
 }
 /* Esquinas de la chacra (se pueden arrastrar) */
 .esquina-chacra {
@@ -305,26 +315,33 @@ body {
 }
 /* Velo de legibilidad para lo que va directo sobre el fondo (títulos, textos sueltos) */
 .sobre-fondo {
-  background: color-mix(in srgb, var(--fondo) 95%, transparent);
+  background: var(--fondo);
   border: 1px solid var(--borde);
   transition: border-color 0.4s ease, box-shadow 0.4s ease;
 }
-/* Tarjetas sobre el fondo animado (solo cuando el fondo está presente: data-estrato lo pone el fondo) */
-/* En el teléfono las tarjetas son casi opacas: al sol, el texto sobre plantas y raíces no se leía bien. */
-:root[data-estrato] .bg-tarjeta { background-color: color-mix(in srgb, var(--tarjeta) 97%, transparent); }
-:root[data-estrato] .bg-tarjeta-2 { background-color: color-mix(in srgb, var(--tarjeta-2) 97%, transparent); }
+/* Tarjetas sobre el fondo animado.
+   En el teléfono son OPACAS: se midió que una tarjeta apenas transparente (97 %) obliga a mezclar toda la escena de
+   atrás en cada cuadro del scroll (34 cuadros por segundo); opaca, el navegador ni dibuja lo que queda tapado (56).
+   Además al sol se lee mejor. En pantallas grandes sí son translúcidas y con desenfoque (data-estrato lo pone el fondo). */
 @media (min-width: 768px) {
   .sobre-fondo { background: color-mix(in srgb, var(--fondo) 88%, transparent); }
   :root[data-estrato] .bg-tarjeta { background-color: color-mix(in srgb, var(--tarjeta) 88%, transparent); }
   :root[data-estrato] .bg-tarjeta-2 { background-color: color-mix(in srgb, var(--tarjeta-2) 88%, transparent); }
-}
-/* El desenfoque se recalcula cada vez que el fondo se mueve: solo en pantallas grandes, no en celulares económicos */
-@media (min-width: 768px) {
   .sobre-fondo,
   :root[data-estrato] .bg-tarjeta,
   :root[data-estrato] .bg-tarjeta-2 {
     -webkit-backdrop-filter: blur(4px);
     backdrop-filter: blur(4px);
+  }
+  /* Calidad mínima: opacas también en pantallas grandes */
+  :root[data-fondo="minimo"] .sobre-fondo { background: var(--fondo); }
+  :root[data-fondo="minimo"][data-estrato] .bg-tarjeta { background-color: var(--tarjeta); }
+  :root[data-fondo="minimo"][data-estrato] .bg-tarjeta-2 { background-color: var(--tarjeta-2); }
+  :root[data-fondo="minimo"] .sobre-fondo,
+  :root[data-fondo="minimo"][data-estrato] .bg-tarjeta,
+  :root[data-fondo="minimo"][data-estrato] .bg-tarjeta-2 {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
   }
 }
 /* Según la profundidad: verde campo en la superficie, dorado cálido en la zona de raíces */
@@ -360,7 +377,23 @@ body {
   .fondo-escena .agro-girar,
   .fondo-escena .agro-salpica,
   .fondo-escena .agro-infiltra,
-  .fondo-escena .agro-recarga { animation: none; }
+  .fondo-escena .agro-recarga { animation: none; will-change: auto; }
 }
+/* Lugar de cada planta: en el teléfono las dos que se ven tienen su posición propia (--x-movil). */
+.fondo-planta { left: var(--x); }
+@media (max-width: 767px) {
+  .fondo-planta { left: var(--x-movil, var(--x)); }
+}
+/* Calidad mínima (teléfono de poca memoria, o se midió que va trabado; ver src/components/fondo/calidad.ts):
+   nada se anima y la escena salta de estrato con una transición corta en vez de seguir al dedo cuadro a cuadro. */
+/* will-change: auto → todo se aplana en UNA sola capa (cada elemento con will-change era una capa aparte que el
+   teléfono tenía que mezclar en cada cuadro, aunque ya no se moviera). */
+:root[data-fondo="minimo"] .fondo-escena * { animation: none !important; will-change: auto !important; }
+:root[data-fondo="minimo"] .fondo-camara { will-change: transform !important; }
+:root[data-fondo="minimo"] .fondo-escena svg [filter] { filter: none; }
+:root[data-fondo="minimo"] .fondo-camara { transition: transform 0.55s ease-out; }
+/* Apagado por el usuario (Menú → Fondo animado): no se ve ni se dibuja. */
+:root[data-fondo="apagado"] .fondo-escena,
+:root[data-fondo="apagado"] .medidor { display: none; }
 /* El fondo es fijo: que el navegador no lo vuelva a pintar cuando cambia el contenido de arriba. */
 .fondo-escena { contain: strict; }

@@ -128,6 +128,7 @@ const UMBRALES_DEFECTO = { seco_max: 0.15, bajo_max: 0.2, optimo_max: 0.35, satu
 export function construirCelda(
   i: number, j: number, resM: number, fecha: string, cfg: CultivoConfig | null, d: Distrito,
   coberturaFija?: Cobertura, // p. ej. "cultivo" para el lote que marcó el agricultor (no hay capa real de cobertura)
+  soloReal = false, // chacras: si no hay dato NISAR en la celda, queda sin dato (nunca se inventa)
 ): Celda {
   const bbox = bboxCelda(i, j, resM);
   const centro: [number, number] = [(bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2];
@@ -135,7 +136,7 @@ export function construirCelda(
   const pendiente = pendienteCelda(centro);
   const real = cobertura === "agua" || cobertura === "urbano" ? null : humedadNisar(centro, fecha);
   // Con grilla real nunca se inventa: si NISAR no tiene dato válido, la celda queda "sin_datos".
-  const humedad = real ? real.valor : humedadCelda(centro, cobertura, pendiente, fecha);
+  const humedad = real ? real.valor : soloReal ? null : humedadCelda(centro, cobertura, pendiente, fecha);
   const estado = humedad === null ? "sin_datos" : clasificarHumedad(humedad, cfg?.humedad ?? UMBRALES_DEFECTO);
   const { aptitud, motivos } = aptitudCelda(cfg, cobertura, estado, pendiente);
   return {
@@ -148,7 +149,7 @@ export function construirCelda(
     pendiente_pct: pendiente,
     humedad_m3m3: humedad,
     humedad_estado: estado,
-    fuente_humedad: real ? "nisar" : "ficticia",
+    fuente_humedad: real || soloReal ? "nisar" : "ficticia",
     ...(real ? { fecha_obs: real.fecha_obs } : {}),
     aptitud,
     apto: aptitud >= 50,
@@ -164,6 +165,7 @@ export interface OpcionesGrilla {
   soloDentroDe?: Poligono[]; // centro de celda dentro del polígono
   libre?: boolean; // no limitar a los distritos de trabajo (lotes dibujados en cualquier parte)
   coberturaFija?: Cobertura;
+  soloReal?: boolean; // nunca usar humedad ficticia (chacras del agricultor)
 }
 
 // Celdas dentro de un bbox, solo las que caen en alguno de los distritos.
@@ -202,7 +204,7 @@ export function generarCeldas(bbox: BBox, op: OpcionesGrilla): { celdas: Celda[]
       const d = distritos.find((x) => puntoEnPoligonos(centro, [x.poligono])) ?? (op.libre ? distritoMasCercano(centro).distrito : undefined);
       if (!d) continue;
       if (op.soloDentroDe && !puntoEnPoligonos(centro, op.soloDentroDe)) continue;
-      celdas.push(construirCelda(i, j, resM, op.fecha, op.cfg ?? null, d, op.coberturaFija));
+      celdas.push(construirCelda(i, j, resM, op.fecha, op.cfg ?? null, d, op.coberturaFija, op.soloReal));
       if (celdas.length > max) return { celdas, res_m: resM, recortado: true };
     }
   }

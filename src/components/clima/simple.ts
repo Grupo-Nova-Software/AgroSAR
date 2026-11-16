@@ -32,6 +32,8 @@ export function fraseDia(d: Pick<DiaDetalle, "mm" | "prob_pct"> | null | undefin
 }
 
 const hora = (iso: string) => `${Number(iso.slice(11, 13))} h`;
+/** Hora en que termina un bloque: las 00:00 del día siguiente se dicen «24 h» (no «0 h»). */
+const horaFin = (iso: string) => (iso.slice(11, 13) === "00" ? "24 h" : hora(iso));
 
 export function consejosDe(datos: RespuestaClima, idioma: Idioma, diaCorto: (iso: string) => string): ConsejoClima[] {
   const es = idioma === "es";
@@ -77,7 +79,7 @@ export function consejosDe(datos: RespuestaClima, idioma: Idioma, diaCorto: (iso
       const desde = queda.desde > datos.hora_actual ? queda.desde : datos.hora_actual;
       lista.push({
         id: "pulverizar_hoy", icono: "pulverizar", tono: "bien",
-        titulo: es ? `Para pulverizar hoy: de ${hora(desde)} a ${hora(queda.hasta)}` : `Spray window today: ${desde.slice(11, 16)}–${queda.hasta.slice(11, 16)}`,
+        titulo: es ? `Para pulverizar hoy: de ${hora(desde)} a ${horaFin(queda.hasta)}` : `Spray window today: ${desde.slice(11, 16)}–${queda.hasta.slice(11, 16)}`,
         texto: es
           ? "A esa hora hay poco viento, no llueve y no hace tanto calor: el producto queda en la planta y no lo tirás."
           : "Light wind, no rain and milder heat at that time: the product stays on the plant instead of being wasted.",
@@ -86,7 +88,7 @@ export function consejosDe(datos: RespuestaClima, idioma: Idioma, diaCorto: (iso
       const b = pulv.manana.bloques[0];
       lista.push({
         id: "pulverizar_manana", icono: "pulverizar", tono: "aviso",
-        titulo: es ? `Hoy no conviene pulverizar. Mañana sí: de ${hora(b.desde)} a ${hora(b.hasta)}` : `Not a good day to spray. Tomorrow: ${b.desde.slice(11, 16)}–${b.hasta.slice(11, 16)}`,
+        titulo: es ? `Hoy no conviene pulverizar. Mañana sí: de ${hora(b.desde)} a ${horaFin(b.hasta)}` : `Not a good day to spray. Tomorrow: ${b.desde.slice(11, 16)}–${b.hasta.slice(11, 16)}`,
         texto: es
           ? `Hoy hay viento de más de ${r.viento_max_kmh} km/h, lluvia o mucho calor, y el producto se pierde.`
           : `Today has wind above ${r.viento_max_kmh} km/h, rain or too much heat, so the product would be lost.`,

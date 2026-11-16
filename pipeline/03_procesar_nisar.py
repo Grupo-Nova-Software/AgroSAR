@@ -3,7 +3,8 @@
 Contrato de salida: contracts/humedad.schema.json (v0). Datos REALES: es_ejemplo = false.
 
 Método por escena y por área (estructura del .h5 verificada el 2026-11-14 con 2 escenas reales):
-  - Grilla EASE-Grid 2.0 de 200 m; `grids/latitude` y `grids/longitude` son vectores 1D → recorte directo por bbox.
+  - Grilla EASE-Grid 2.0 de 200 m; `grids/latitude` y `grids/longitude` son vectores 1D → recorte directo por bbox
+    y después máscara con el contorno real de Itapúa (pipeline/zonas.py).
   - Humedad: `grids/soilMoisture` (m³/m³), _FillValue -9999.
   - Calidad: `grids/retrievalQualityFlag`, bit menos significativo: 0 = recomendado, 1 = no recomendado.
   - Agua: `grids/ancillaryData/waterbodyFraction` > 0.5 se excluye.
@@ -23,7 +24,7 @@ from collections import defaultdict
 import h5py
 import numpy as np
 
-from zonas import ZONAS
+from zonas import ZONAS, mascara_itapua
 
 RAIZ = pathlib.Path(__file__).resolve().parent.parent
 ENTRADA = RAIZ / "data" / "raw" / "sme2"
@@ -60,7 +61,9 @@ def procesar_escena(ruta: pathlib.Path):
             hv = f[G + "radarData/frequencyA/sigma0HV"][sl]
 
             sin_agua = (agua == FILL) | (agua <= FRAC_AGUA_MAX)
-            valida = (sm != FILL) & (sm >= 0) & (sm <= 1) & sin_agua
+            # Solo las celdas cuyo centro cae dentro del contorno real del área (no todo el rectángulo)
+            en_area = mascara_itapua(lon[sl[1]], lat[sl[0]]) if "anillo" in z else True
+            valida = (sm != FILL) & (sm >= 0) & (sm <= 1) & sin_agua & en_area
             recom = valida & (qf != FILL) & ((qf & 1) == 0)
             usar, calidad = (recom, "buena") if recom.sum() >= MIN_CELDAS else (valida, "dudosa")
             if usar.sum() == 0:
@@ -121,7 +124,7 @@ def main():
         salida = {
             "id": aid, "zona": z["zona"], "tipo": z["tipo"], "bbox": z["bbox"],
             "fuente": FUENTE, "es_ejemplo": False,
-            "mascara": "Celdas de 200 m con retrievalQualityFlag 'recomendado' y sin agua (waterbodyFraction ≤ 0.5); "
+            "mascara": "Celdas de 200 m dentro del contorno de Itapúa (OpenStreetMap), con retrievalQualityFlag 'recomendado' y sin agua (waterbodyFraction ≤ 0.5); "
                        f"si hay menos de {MIN_CELDAS}, todas las válidas (calidad 'dudosa').",
             "serie": serie,
         }

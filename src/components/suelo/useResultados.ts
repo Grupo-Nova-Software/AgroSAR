@@ -3,7 +3,7 @@
 // y el cultivo actuales (o tiene más de 6 horas), lo pide a /api/lote y lo guarda en el teléfono junto a la chacra.
 // Sin internet no hace nada: la app muestra lo último guardado.
 import { useEffect, useRef, useState } from "react";
-import { claveDe, useEnLinea, type Chacra } from "../chacras";
+import { claveDe, fueraDeItapua, useEnLinea, type Chacra } from "../chacras";
 import { analizarLote } from "./api";
 
 const VIGENCIA_MS = 6 * 3_600_000;
@@ -17,6 +17,7 @@ export function useResultados(chacras: Chacra[], actualizar: (id: string, cambio
     if (!enLinea) return;
     const ahora = Date.now();
     const vencidas = chacras.filter((c) => {
+      if (fueraDeItapua(c)) return false; // sin datos fuera de Itapúa: no se le pregunta al servidor
       const clave = claveDe(c);
       const vieja = !c.resultado || ahora - new Date(c.resultado.consultado).getTime() > VIGENCIA_MS;
       return (c.claveResultado !== clave || vieja) && !enCurso.current.has(clave);

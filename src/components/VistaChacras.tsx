@@ -2,7 +2,7 @@
 // "Mis chacras": todas las chacras del agricultor de un vistazo, con su semáforo y el agua del suelo.
 // Funciona sin internet con el último resultado guardado en el teléfono.
 import Link from "next/link";
-import { useChacras, type Chacra } from "./chacras";
+import { fueraDeItapua, useChacras, type Chacra } from "./chacras";
 import { CULTIVOS } from "./cultivos";
 import { useIdioma, type Clave } from "./idioma";
 import Icono, { Dibujo } from "./Icono";
@@ -98,7 +98,9 @@ export default function VistaChacras() {
                           <Dibujo nombre={`cultivo-${c.cultivo}`} className="h-6 w-6" />
                           {tr(cultivo.nombre)} · {num(hectareasDe(c.vertices))} {t("ha")}
                         </p>
-                        {r ? (
+                        {fueraDeItapua(c) ? (
+                          <p className="mt-2 text-[15px] font-bold leading-snug text-peligro">{t("chacraFuera")}</p>
+                        ) : r ? (
                           <>
                             <p
                               className={`mt-2 inline-block rounded-full px-3 py-0.5 text-[15px] font-bold ${r.estado === "esperar" ? "text-[#2b2410]" : "text-white"}`}

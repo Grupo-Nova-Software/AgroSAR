@@ -1,22 +1,27 @@
 "use client";
-// Pantalla "Clima". Primero lo simple: ahora, hoy, mañana, qué conviene hacer y los próximos días.
-// El botón «Ver datos avanzados» abre el mapa del clima, hora por hora, balance de agua y la campaña.
-// Se puede ver el clima de cada chacra guardada (en su ubicación exacta) o de una zona.
-// Datos: GET /api/clima (punto o zona). Rol Backend: src/lib/clima.
+// Pantalla "Clima" de todo Itapúa.
+// 1) Lo simple: ahora, hoy, mañana, qué conviene hacer y los próximos días, para el lugar elegido.
+// 2) El mapa del clima de todo el departamento (capas, línea de tiempo, viento): tocar el mapa cambia el lugar.
+// 3) «Ver más datos»: hora por hora, balance de agua y la campaña (se descargan recién ahí).
+// Lugar: una chacra guardada (su ubicación exacta), donde estoy ahora (GPS), un punto tocado en el mapa
+// o, si no hay nada de eso, el centro de Itapúa. Ya no hay zonas.
+// Datos: GET /api/clima (punto o área "itapua"). Rol Backend: src/lib/clima.
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { IndiceHumedad, SerieHumedad } from "@/types/contratos";
 import type { RespuestaClima } from "@/lib/clima/tipos";
-import { useChacras } from "./chacras";
+import { ITAPUA_ID } from "@/lib/itapua";
+import { centroDeChacra, fueraDeItapua, useChacras } from "./chacras";
 import ClimaSimple from "./clima/ClimaSimple";
+import SeccionMapaClima from "./clima/SeccionMapaClima";
 import { useClimaTextos } from "./clima/textos";
 import { CULTIVOS } from "./cultivos";
 import Icono, { Dibujo, type NombreDibujo } from "./Icono";
 import { cieloActual, cieloDeDia, humedadDe, type EstadoCielo } from "./fondo/cielo";
 import FondoCultivoScroll from "./FondoCultivoScroll";
 import Marco from "./Marco";
-import { esCultivo, useCultivoGuardado, useZonaGuardada } from "./preferencias";
+import { esCultivo, useCultivoGuardado } from "./preferencias";
+import { reintentarUbicacion, textoPrecision, useUbicacion } from "./ubicacion";
 
 const NOMBRE_CIELO: Record<EstadoCielo, { icono: NombreDibujo; es: string; en: string }> = {
   soleado_calor: { icono: "clima-sol", es: "Sol y calor fuerte", en: "Sunny and very hot" },
@@ -28,7 +33,7 @@ const NOMBRE_CIELO: Record<EstadoCielo, { icono: NombreDibujo; es: string; en: s
   helada_frio: { icono: "clima-nube", es: "Frío / riesgo de helada", en: "Cold / frost risk" },
 };
 
-// Lo avanzado (mapa incluido) se descarga recién cuando se pide.
+// Los datos pesados se descargan recién cuando se piden.
 const ClimaAvanzado = dynamic(() => import("./clima/ClimaAvanzado"), {
   ssr: false,
   loading: () => <div className="mx-3 h-64 animate-pulse rounded-2xl bg-tarjeta-2 md:mx-8" />,
@@ -40,65 +45,61 @@ const FUENTES_UI: Record<"nasa_power" | "open_meteo" | "climatologia", string> =
   climatologia: "NASA POWER (climatology)",
 };
 const CLAVE_AVANZADO = "agrosar.clima.avanzado";
+/** Para el clima alcanza con una ubicación aproximada (el pronóstico cambia poco en pocos km). SUPUESTO. */
+const PRECISION_CLIMA_M = 15_000;
 
-export default function VistaClima({ cultivo: cultivoParam, area: areaParam }: { cultivo?: string; area?: string }) {
+export default function VistaClima({ cultivo: cultivoParam }: { cultivo?: string; /** ya no hay zonas: se ignora */ area?: string }) {
   const { tc, idioma } = useClimaTextos();
   const es = idioma === "es";
   const router = useRouter();
   const { chacras, cargadas } = useChacras();
+  const misChacras = chacras.filter((c) => !fueraDeItapua(c));
 
-  const [areas, setAreas] = useState<SerieHumedad[]>([]);
-  /** "chacra:<id>" · "zona:<id>" · "punto" (tocado en el mapa avanzado) · null = todavía sin elegir */
-  const [lugar, setLugar] = useState<string | null>(areaParam ? `zona:${areaParam}` : null);
+  /** "chacra:<id>" · "ubicacion" (GPS) · "punto" (tocado en el mapa) · "itapua" (centro) · null = todavía sin elegir */
+  const [lugar, setLugar] = useState<string | null>(null);
   const [puntoMapa, setPuntoMapa] = useState<{ lat: number; lon: number } | null>(null);
   const [resultado, setResultado] = useState<{ clave: string; datos: RespuestaClima } | null>(null);
   const [fallo, setFallo] = useState<string | null>(null); // clave de la consulta que falló
   const [intento, setIntento] = useState(0);
   const [avanzado, setAvanzado] = useState(false);
   const refAvanzado = useRef<HTMLDivElement>(null);
-  // Cultivo y zona compartidos con Inicio y Mi suelo
   const [cultivoGuardado, guardarCultivo] = useCultivoGuardado();
-  const [zonaGuardada, guardarZona] = useZonaGuardada();
   /** Momento que muestra el cielo del fondo: "ahora" o un día del pronóstico (AAAA-MM-DD). */
   const [momento, setMomento] = useState<string>("ahora");
 
-  // Lugar por defecto: la última zona elegida; si no hay, la primera chacra guardada; si no, la primera zona
-  const zonaPrevia = zonaGuardada && areas.some((a) => a.id === zonaGuardada) ? `zona:${zonaGuardada}` : null;
-  const lugarActual = lugar ?? (cargadas ? (zonaPrevia ?? (chacras[0] ? `chacra:${chacras[0].id}` : areas[0] ? `zona:${areas[0].id}` : null)) : null);
-  const chacra = lugarActual?.startsWith("chacra:") ? chacras.find((c) => `chacra:${c.id}` === lugarActual) : undefined;
-  const zonaElegida = lugarActual?.startsWith("zona:") ? lugarActual.slice(5) : "";
-  const areaId = (areas.some((a) => a.id === zonaElegida) ? zonaElegida : areas[0]?.id) ?? "";
+  // GPS: solo se enciende si el usuario eligió «Donde estoy ahora» (no se pide permiso al entrar)
+  const { ubic, estado: estadoUbic } = useUbicacion(lugar === "ubicacion");
+  const ubicSirve = !!ubic && ubic.enItapua && ubic.precision_m <= PRECISION_CLIMA_M;
+
+  // Lugar por defecto: la chacra del cultivo elegido (o la primera); sin chacras, el centro de Itapúa
   const cultivoUrl = esCultivo(cultivoParam) ? cultivoParam : null;
-  const cultivo = chacra?.cultivo ?? cultivoUrl ?? cultivoGuardado ?? CULTIVOS[0].id;
+  const cultivoPreferido = cultivoUrl ?? cultivoGuardado;
+  const chacraPorDefecto = misChacras.find((c) => c.cultivo === cultivoPreferido) ?? misChacras[0];
+  const lugarActual = lugar ?? (cargadas ? (chacraPorDefecto ? `chacra:${chacraPorDefecto.id}` : "itapua") : null);
+  const chacra = lugarActual?.startsWith("chacra:") ? misChacras.find((c) => `chacra:${c.id}` === lugarActual) : undefined;
+  const cultivo = chacra?.cultivo ?? cultivoPreferido ?? CULTIVOS[0].id;
   useEffect(() => {
     if (cultivoUrl) guardarCultivo(cultivoUrl);
   }, [cultivoUrl, guardarCultivo]);
+
   const punto = chacra
-    ? {
-        lat: Number((chacra.vertices.reduce((s, v) => s + v[1], 0) / chacra.vertices.length).toFixed(4)),
-        lon: Number((chacra.vertices.reduce((s, v) => s + v[0], 0) / chacra.vertices.length).toFixed(4)),
-      }
+    ? centroDeChacra(chacra)
     : lugarActual === "punto"
       ? puntoMapa
-      : null;
+      : lugarActual === "ubicacion" && ubicSirve
+        ? { lat: Number(ubic!.pos[1].toFixed(4)), lon: Number(ubic!.pos[0].toFixed(4)) }
+        : null;
+  const esperandoUbic = lugarActual === "ubicacion" && !ubicSirve;
 
   useEffect(() => {
-    (async () => {
-      try {
-        const indice: IndiceHumedad = await (await fetch("/data/humedad/index.json")).json();
-        setAreas(await Promise.all(indice.zonas.map(async (z) => (await fetch(`/data/humedad/${z.archivo}`)).json())));
-      } catch {
-        setFallo("zonas");
-      }
-    })();
     try {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorage solo existe en el navegador
       if (localStorage.getItem(CLAVE_AVANZADO) === "1") setAvanzado(true);
     } catch {}
   }, []);
 
-  // Clima del punto (chacra o toque en el mapa) o del centro de la zona
-  const clave = !lugarActual ? "" : punto ? `${punto.lat},${punto.lon}|${cultivo}` : areaId ? `${areaId}|${cultivo}` : "";
+  // Clima del punto (chacra, GPS o toque en el mapa) o del centro de Itapúa
+  const clave = !lugarActual ? "" : punto ? `${punto.lat},${punto.lon}|${cultivo}` : `${ITAPUA_ID}|${cultivo}`;
   useEffect(() => {
     if (!clave) return;
     let vigente = true;
@@ -106,7 +107,7 @@ export default function VistaClima({ cultivo: cultivoParam, area: areaParam }: {
     if (punto) {
       q.set("lat", String(punto.lat));
       q.set("lon", String(punto.lon));
-    } else q.set("area", areaId);
+    } else q.set("area", ITAPUA_ID);
     fetch(`/api/clima?${q.toString()}`)
       .then(async (r) => (r.ok ? ((await r.json()) as RespuestaClima) : Promise.reject(new Error(String(r.status)))))
       .then((datos) => {
@@ -125,13 +126,13 @@ export default function VistaClima({ cultivo: cultivoParam, area: areaParam }: {
     setPuntoMapa({ lat, lon });
     setLugar("punto");
   }, []);
+  const pedirUbicacion = useCallback(() => {
+    setLugar("ubicacion");
+    reintentarUbicacion();
+  }, []);
   const cambiarLugar = (v: string) => {
     setLugar(v);
-    if (v.startsWith("zona:")) {
-      guardarZona(v.slice(5));
-      router.replace(`/clima?${new URLSearchParams({ cultivo, area: v.slice(5) }).toString()}`, { scroll: false });
-    }
-    const elegida = v.startsWith("chacra:") ? chacras.find((c) => `chacra:${c.id}` === v) : undefined;
+    const elegida = v.startsWith("chacra:") ? misChacras.find((c) => `chacra:${c.id}` === v) : undefined;
     if (elegida && esCultivo(elegida.cultivo)) guardarCultivo(elegida.cultivo);
   };
   const alternarAvanzado = () => {
@@ -160,31 +161,46 @@ export default function VistaClima({ cultivo: cultivoParam, area: areaParam }: {
         ? es ? "Mañana" : "Tomorrow"
         : new Date(`${fecha}T12:00:00`).toLocaleDateString(es ? "es-PY" : "en-US", { weekday: "short", day: "numeric" });
   const chip = (activo: boolean) =>
-    `min-h-11 shrink-0 rounded-full border-2 px-3 text-sm font-bold ${activo ? "border-primario bg-primario text-sobre-primario" : "border-borde bg-fondo text-texto"}`;
+    `flex min-h-11 shrink-0 items-center gap-1.5 rounded-full border px-3 text-sm font-bold ${activo ? "border-primario bg-primario text-sobre-primario" : "border-borde bg-tarjeta text-texto"}`;
+
+  // Qué decir mientras el GPS no sirve para el clima
+  const avisoUbic = !esperandoUbic
+    ? null
+    : estadoUbic === "denegada"
+      ? es ? "La app no tiene permiso para ver tu ubicación. Activalo en los ajustes del navegador." : "The app has no permission to see your location. Enable it in the browser settings."
+      : estadoUbic === "sin_soporte" || estadoUbic === "error"
+        ? es ? "No se pudo obtener tu ubicación. Mientras tanto se muestra el centro de Itapúa." : "Your location could not be obtained. Showing the centre of Itapúa meanwhile."
+        : ubic && !ubic.enItapua
+          ? es ? "Estás fuera de Itapúa: se muestra el centro del departamento." : "You are outside Itapúa: showing the centre of the department."
+          : ubic
+            ? es ? `Tu ubicación es muy aproximada (${textoPrecision(ubic.precision_m)}). Se muestra el centro de Itapúa; tocá el mapa para elegir tu lugar.` : `Your location is very approximate (${textoPrecision(ubic.precision_m)}). Showing the centre of Itapúa; tap the map to pick your place.`
+            : es ? "Buscando tu ubicación…" : "Finding your location…";
 
   return (
     <Marco variante="compacta" cultivo={cultivo} fondo={fondo}>
       <div className="space-y-4 px-3 md:px-8">
-        <header className="sobre-fondo rounded-3xl p-4">
-          <h1 className="font-display text-3xl font-bold leading-tight">{es ? "El clima en tu chacra" : "Weather on your field"}</h1>
+        <header className="sobre-fondo rounded-2xl p-4">
+          <h1 className="font-display text-3xl font-bold leading-tight">{es ? "El clima en Itapúa" : "Weather in Itapúa"}</h1>
           <label className="mt-2 flex flex-col gap-1 text-sm font-bold text-texto-suave">
             {es ? "¿Dónde?" : "Where?"}
-            <select className={control} value={lugarActual ?? ""} onChange={(e) => cambiarLugar(e.target.value)}>
-              {chacras.length > 0 && (
+            <select className={control} value={lugarActual ?? ""} onChange={(e) => (e.target.value === "ubicacion" ? pedirUbicacion() : cambiarLugar(e.target.value))}>
+              {misChacras.length > 0 && (
                 <optgroup label={es ? "Mis chacras" : "My fields"}>
-                  {chacras.map((c) => (
+                  {misChacras.map((c) => (
                     <option key={c.id} value={`chacra:${c.id}`}>{c.nombre}</option>
                   ))}
                 </optgroup>
               )}
-              <optgroup label={es ? "Zonas" : "Zones"}>
-                {areas.map((a) => (
-                  <option key={a.id} value={`zona:${a.id}`}>{a.zona}</option>
-                ))}
-              </optgroup>
-              {puntoMapa && <option value="punto">{es ? "Punto elegido en el mapa" : "Point picked on the map"}</option>}
+              <option value="ubicacion">{es ? "Donde estoy ahora" : "Where I am now"}</option>
+              <option value="itapua">{es ? "Itapúa (centro del departamento)" : "Itapúa (centre of the department)"}</option>
+              {puntoMapa && (
+                <option value="punto">
+                  {es ? "Punto que toqué en el mapa" : "Point I tapped on the map"} ({puntoMapa.lat.toFixed(2)}, {puntoMapa.lon.toFixed(2)})
+                </option>
+              )}
             </select>
           </label>
+          {avisoUbic && <p role="status" className="mt-2 rounded-lg bg-dorado/25 px-3 py-2 text-sm font-bold leading-snug">{avisoUbic}</p>}
           {!chacra && (
             <label className="mt-2 flex flex-col gap-1 text-sm font-bold text-texto-suave">
               {tc("cultivo")}
@@ -193,7 +209,7 @@ export default function VistaClima({ cultivo: cultivoParam, area: areaParam }: {
                 value={cultivo}
                 onChange={(e) => {
                   if (esCultivo(e.target.value)) guardarCultivo(e.target.value);
-                  router.replace(`/clima?${new URLSearchParams({ cultivo: e.target.value, ...(areaId ? { area: areaId } : {}) }).toString()}`, { scroll: false });
+                  router.replace(`/clima?${new URLSearchParams({ cultivo: e.target.value }).toString()}`, { scroll: false });
                 }}
               >
                 {CULTIVOS.map((c) => (
@@ -221,9 +237,16 @@ export default function VistaClima({ cultivo: cultivoParam, area: areaParam }: {
         <div aria-busy={cargando} className={cargando && datos ? "opacity-60 transition-opacity" : "transition-opacity"}>
           {datos ? <ClimaSimple datos={datos} /> : fallo !== clave && <p className="rounded-2xl bg-tarjeta p-6 text-center text-lg text-texto-suave">{tc("cargando")}</p>}
         </div>
+      </div>
 
+      {/* Mapa del clima de todo Itapúa: ocupa todo el ancho en el celular */}
+      <div className="mt-4">
+        <SeccionMapaClima datos={datos} punto={punto} alElegirPunto={elegirPunto} alPedirUbicacion={pedirUbicacion} />
+      </div>
+
+      <div className="mt-4 space-y-4 px-3 md:px-8">
         {datos && dias.length > 0 && (
-          <div className="sobre-fondo rounded-2xl px-3 py-2">
+          <div className="sobre-fondo rounded-xl px-3 py-2">
             <p className="text-sm font-bold text-texto-suave" id="cielo-fondo">
               {es ? "Cielo del fondo" : "Background sky"}: <Dibujo nombre={NOMBRE_CIELO[cielo].icono} className="h-6 w-6 align-[-6px]" /> {NOMBRE_CIELO[cielo][idioma]}
             </p>
@@ -233,7 +256,7 @@ export default function VistaClima({ cultivo: cultivoParam, area: areaParam }: {
               </button>
               {dias.map((d, i) => (
                 <button key={d.fecha} type="button" role="radio" aria-checked={momento === d.fecha} onClick={() => setMomento(d.fecha)} className={chip(momento === d.fecha)}>
-                  <span aria-hidden>{NOMBRE_CIELO[cieloDeDia(d)].icono}</span> {nombreDia(d.fecha, i)}
+                  <Dibujo nombre={NOMBRE_CIELO[cieloDeDia(d)].icono} className="h-6 w-6" /> {nombreDia(d.fecha, i)}
                 </button>
               ))}
             </div>
@@ -248,10 +271,12 @@ export default function VistaClima({ cultivo: cultivoParam, area: areaParam }: {
               aria-expanded={avanzado}
               className="flex min-h-14 w-full items-center justify-center gap-2 rounded-xl border border-borde bg-tarjeta px-4 text-base font-bold text-acento shadow-suave"
             >
-              <Icono nombre={avanzado ? "arriba" : "mapa"} />
-              {avanzado ? (es ? "Ocultar datos avanzados" : "Hide advanced data") : es ? "Ver datos avanzados y mapa del clima" : "Show advanced data and weather map"}
+              <Icono nombre={avanzado ? "arriba" : "abajo"} />
+              {avanzado
+                ? es ? "Ocultar los datos avanzados" : "Hide advanced data"
+                : es ? "Ver más datos: hora por hora, balance de agua y campaña" : "More data: hour by hour, water balance and season"}
             </button>
-            <p className="sobre-fondo rounded-2xl px-4 py-2 text-sm leading-snug text-texto-suave">
+            <p className="sobre-fondo rounded-xl px-4 py-2 text-sm leading-snug text-texto-suave">
               {es
                 ? "Pronóstico: Open-Meteo (modelo; no es dato de NASA). Lluvia de los últimos días: NASA POWER. Agua del suelo: radar NISAR (NASA-ISRO)."
                 : "Forecast: Open-Meteo (model; not NASA data). Recent rain: NASA POWER. Soil water: NISAR radar (NASA-ISRO)."}
@@ -261,7 +286,7 @@ export default function VistaClima({ cultivo: cultivoParam, area: areaParam }: {
       </div>
 
       <div ref={refAvanzado} className="mt-4 scroll-mt-20">
-        {avanzado && datos && <ClimaAvanzado datos={datos} areas={areas} areaId={areaId} punto={punto} alElegirPunto={elegirPunto} />}
+        {avanzado && datos && <ClimaAvanzado datos={datos} />}
       </div>
     </Marco>
   );

@@ -1,9 +1,10 @@
 "use client";
-// Estado del cielo del fondo, a partir del clima real de la zona (GET /api/clima: Open-Meteo + NASA POWER).
+// Estado del cielo del fondo, a partir del clima real del lugar (GET /api/clima: Open-Meteo + NASA POWER).
 // Umbrales: SUPUESTOS del equipo para elegir el dibujo (no son alertas agronómicas).
 // La API no trae cobertura de nubes: "nublado" se estima con la probabilidad de lluvia y la humedad del aire.
 import { useEffect, useState } from "react";
 import type { DiaDetalle, HoraDetalle, RespuestaClima } from "@/lib/clima/tipos";
+import { ITAPUA_ID } from "@/lib/itapua";
 
 export type EstadoCielo =
   | "soleado_calor"
@@ -73,18 +74,9 @@ export function humedadDe(datos: RespuestaClima | null | undefined): HumedadFond
   return null;
 }
 
-// ---------------------------------------------------------------- Clima de la zona (Inicio y Mi suelo)
+// ---------------------------------------------------------------- Clima del lugar (Inicio y Mi suelo)
 const VIGENCIA_MS = 20 * 60 * 1000;
 const memoria = new Map<string, { t: number; datos: RespuestaClima }>();
-let zonaPorDefecto: Promise<string | null> | null = null;
-
-function primeraZona(): Promise<string | null> {
-  zonaPorDefecto ??= fetch("/data/humedad/index.json")
-    .then((r) => r.json())
-    .then((i: { zonas: { id: string }[] }) => i.zonas[0]?.id ?? null)
-    .catch(() => null);
-  return zonaPorDefecto;
-}
 
 function guardado(clave: string): RespuestaClima | null {
   const m = memoria.get(clave);
@@ -101,26 +93,30 @@ function guardado(clave: string): RespuestaClima | null {
   }
 }
 
+export interface PuntoLugar { lat: number; lon: number }
+
 /**
- * Clima de la zona para el fondo. Se pide una vez cada 20 min por zona y cultivo (memoria + sessionStorage),
- * así pasar de Inicio a Mi suelo no repite la consulta. Sin internet devuelve null y el fondo queda despejado.
+ * Clima de un lugar de Itapúa: el punto dado (la chacra) o, sin punto, el centro del departamento.
+ * Se pide una vez cada 20 min por lugar y cultivo (memoria + sessionStorage), así pasar de Inicio a Mi suelo
+ * no repite la consulta. Sin internet devuelve null (el fondo queda despejado y los consejos avisan).
  */
-export function useClimaZona(zona: string | null, cultivo: string): RespuestaClima | null {
+export function useClimaLugar(punto: PuntoLugar | null, cultivo: string): RespuestaClima | null {
   const [resultado, setResultado] = useState<{ clave: string; datos: RespuestaClima } | null>(null);
+  const lat = punto?.lat ?? null;
+  const lon = punto?.lon ?? null;
+  const clave = `${lat !== null && lon !== null ? `${lat.toFixed(3)},${lon.toFixed(3)}` : ITAPUA_ID}|${cultivo}`;
 
   useEffect(() => {
     let vigente = true;
     (async () => {
-      const z = zona ?? (await primeraZona());
-      if (!z || !vigente) return;
-      const clave = `${z}|${cultivo}`;
       const enCache = guardado(clave);
       if (enCache) {
         setResultado({ clave, datos: enCache });
         return;
       }
       try {
-        const r = await fetch(`/api/clima?${new URLSearchParams({ area: z, cultivo }).toString()}`);
+        const q: Record<string, string> = lat !== null && lon !== null ? { lat: String(lat), lon: String(lon), cultivo } : { area: ITAPUA_ID, cultivo };
+        const r = await fetch(`/api/clima?${new URLSearchParams(q).toString()}`);
         if (!r.ok) return;
         const datos = (await r.json()) as RespuestaClima;
         const v = { t: Date.now(), datos };
@@ -136,7 +132,7 @@ export function useClimaZona(zona: string | null, cultivo: string): RespuestaCli
     return () => {
       vigente = false;
     };
-  }, [zona, cultivo]);
+  }, [clave, lat, lon, cultivo]);
 
-  return resultado?.datos ?? null;
+  return resultado?.clave === clave ? resultado.datos : null;
 }

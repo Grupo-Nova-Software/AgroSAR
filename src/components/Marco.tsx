@@ -7,6 +7,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import { CULTIVOS } from "./cultivos";
+import { elegirFondo, useCalidadFondo } from "./fondo/calidad";
 import { Dibujo, type NombreDibujo } from "./Icono";
 import { useIdioma, type Clave, type Idioma } from "./idioma";
 import InstalarApp from "./InstalarApp";
@@ -168,6 +169,7 @@ function BarraPestanas() {
 
 function Menu({ cultivo, alCerrar }: { cultivo?: string; alCerrar: () => void }) {
   const { t, tr, idioma, setIdioma } = useIdioma();
+  const fondoEncendido = useCalidadFondo() !== "apagado";
   const { tema, alternar } = useTema();
   const ruta = usePathname();
 
@@ -270,6 +272,21 @@ function Menu({ cultivo, alCerrar }: { cultivo?: string; alCerrar: () => void })
             {t("modoOscuro")}
             <span className={`relative h-7 w-12 rounded-full transition-colors ${tema === "dark" ? "bg-primario" : "bg-borde"}`}>
               <span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-all ${tema === "dark" ? "left-6" : "left-1"}`} />
+            </span>
+          </button>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={fondoEncendido}
+            onClick={() => elegirFondo(!fondoEncendido)}
+            className="flex min-h-12 w-full items-center justify-between gap-3 rounded-xl border-2 border-borde px-4 py-2 text-left text-base font-bold"
+          >
+            <span>
+              {t("fondoAnimado")}
+              <span className="block text-sm font-normal leading-snug text-texto-suave">{t("fondoAnimadoAyuda")}</span>
+            </span>
+            <span className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${fondoEncendido ? "bg-primario" : "bg-borde"}`}>
+              <span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-all ${fondoEncendido ? "left-6" : "left-1"}`} />
             </span>
           </button>
         </div>

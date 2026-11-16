@@ -249,6 +249,8 @@ export interface RespuestaClima {
     area_id: string | null;
     zona: string | null;
     dentro_de_area: boolean;
+    /** De dónde sale la humedad NISAR: del punto (grilla de 200 m, bloque de 600 m) o del promedio del área. */
+    nisar_de?: "punto" | "area";
     elevacion_m: number | null;
   };
   cultivo: { id: string; nombre: string; nombre_en: string };

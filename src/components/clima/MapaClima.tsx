@@ -1,52 +1,51 @@
 "use client";
-// Mapa del clima (Leaflet), sobre la vista aérea Esri para reconocer la chacra.
+// Mapa del clima de TODO Itapúa (Leaflet), sobre la vista aérea Esri para reconocer la chacra.
+// Solo se ve el departamento (contorno marcado, lo de afuera tapado; ver ../mapaBase.ts).
 // - Capa de clima: la grilla de pronóstico de /api/clima/mapa interpolada y coloreada (7 capas agrícolas).
 // - Línea de tiempo: 48 h en pasos de 3 h o 14 días, con botón de reproducir.
 // - Pin: al tocar el mapa muestra temperatura, lluvia, viento y humedad del aire en ese punto y momento.
-// - Capas de apoyo: zonas de análisis, mi chacra (la marcada en «Mi suelo»), radar NISAR y puntos de referencia.
+// - Capas de apoyo: mis chacras, radar NISAR (imagen de la última pasada), puntos de referencia y viento en movimiento.
 // Leaflet maneja el <div> del mapa: React NUNCA le cambia las clases.
 import "leaflet/dist/leaflet.css";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ImageOverlay, LayerGroup, Map as LMap, Marker, TileLayer } from "leaflet";
-import type { SerieHumedad } from "@/types/contratos";
 import type { GrillaClima, RespuestaClima } from "@/lib/clima/tipos";
 import { CAPAS, cssColor, degradado, ESCALAS, interpolar, pintarCapa, posicionEnEscala, prepararCampos, type CapaId, type Modo } from "./escalas";
 import { useChacras } from "../chacras";
 import Icono from "../Icono";
-import { capaAerea, ESRI_NOMBRES } from "../mapaBase";
+import { dentroDeItapua, ITAPUA_BBOX } from "@/lib/itapua";
+import { capaAerea, ESRI_NOMBRES, marcoItapua, OPCIONES_RAPIDAS } from "../mapaBase";
 import { useClimaTextos, type ClaveClima } from "./textos";
 import { animarViento } from "./viento";
 
 const VACIO = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
 
-type Apoyo = "limites" | "chacra" | "nisar" | "nodos" | "nombres" | "viento";
+type Apoyo = "chacra" | "nisar" | "nodos" | "nombres" | "viento";
 interface IndiceMapa { bbox: [number, number, number, number]; fechas: string[] }
 
-const token = (nombre: string) => getComputedStyle(document.documentElement).getPropertyValue(nombre).trim();
 
 export default function MapaClima({
   grilla,
   errorGrilla,
-  areas,
-  areaId,
   datos,
   punto,
   alElegirPunto,
+  alPedirUbicacion,
 }: {
   grilla: GrillaClima | null;
   errorGrilla: boolean;
-  areas: SerieHumedad[];
-  areaId: string;
   datos: RespuestaClima | null;
   /** Punto que tocó el usuario; null = centro de la zona. */
   punto: { lat: number; lon: number } | null;
   alElegirPunto: (lat: number, lon: number) => void;
+  /** Botón «Dónde estoy»: el que usa el mapa decide qué hacer (pedir el GPS y mostrar el clima de ahí). */
+  alPedirUbicacion?: () => void;
 }) {
   const { tc, n, diaCorto, rumbo, fecha } = useClimaTextos();
   const contenedor = useRef<HTMLDivElement>(null);
   const mapa = useRef<LMap | null>(null);
   const LRef = useRef<typeof import("leaflet") | null>(null);
-  const capas = useRef<{ zonas: LayerGroup; chacra: LayerGroup; nisar: LayerGroup; nodos: LayerGroup; nombres: TileLayer; clima: ImageOverlay } | null>(null);
+  const capas = useRef<{ chacra: LayerGroup; nisar: LayerGroup; nodos: LayerGroup; nombres: TileLayer; clima: ImageOverlay } | null>(null);
   const pin = useRef<Marker | null>(null);
   const lienzo = useRef<HTMLCanvasElement | null>(null);
   const lienzoViento = useRef<HTMLCanvasElement>(null);
@@ -56,15 +55,32 @@ export default function MapaClima({
   const [modo, setModo] = useState<Modo>("h");
   const [paso, setPaso] = useState(0);
   const [reproduciendo, setReproduciendo] = useState(false);
-  const [apoyo, setApoyo] = useState<Record<Apoyo, boolean>>({ limites: true, chacra: true, nisar: false, nodos: true, nombres: true, viento: true });
+  const [apoyo, setApoyo] = useState<Record<Apoyo, boolean>>({ chacra: true, nisar: false, nodos: false, nombres: true, viento: true });
   const [panel, setPanel] = useState(false);
   const { chacras } = useChacras();
   const [indiceNisar, setIndiceNisar] = useState<IndiceMapa | null>(null);
 
+  const [aviso, setAviso] = useState(false);
   const vivo = useRef({ alElegirPunto });
   useEffect(() => {
     vivo.current = { alElegirPunto };
   });
+
+  // ¿El punto está dentro de Itapúa? Versión rápida para el viento (rejilla de 96 × 64 calculada una sola vez).
+  const dentroRapido = useMemo(() => {
+    const NX = 96;
+    const NY = 64;
+    const [lo1, la1, lo2, la2] = ITAPUA_BBOX;
+    const celdas = new Uint8Array(NX * NY);
+    for (let j = 0; j < NY; j++) for (let i = 0; i < NX; i++) {
+      celdas[j * NX + i] = dentroDeItapua(lo1 + ((i + 0.5) / NX) * (lo2 - lo1), la1 + ((j + 0.5) / NY) * (la2 - la1)) ? 1 : 0;
+    }
+    return (lat: number, lon: number) => {
+      const i = Math.floor(((lon - lo1) / (lo2 - lo1)) * NX);
+      const j = Math.floor(((lat - la1) / (la2 - la1)) * NY);
+      return i >= 0 && j >= 0 && i < NX && j < NY && celdas[j * NX + i] === 1;
+    };
+  }, []);
 
   const campos = useMemo(() => (grilla ? prepararCampos(grilla) : null), [grilla]);
   const pasos = grilla ? (modo === "h" ? grilla.horas.length : grilla.dias.length) : 0;
@@ -90,21 +106,30 @@ export default function MapaClima({
       const L = (await import("leaflet")).default;
       if (cancelado || !contenedor.current || mapa.current) return;
       LRef.current = L;
-      const m = L.map(contenedor.current, { maxZoom: 19, zoomControl: true });
+      const m = L.map(contenedor.current, { maxZoom: 19, zoomControl: false });
+      L.control.zoom({ position: "bottomleft" }).addTo(m);
       m.createPane("clima").style.zIndex = "350";
       m.getPane("clima")!.style.pointerEvents = "none";
-      capaAerea(L, m).addTo(m);
+      const { limites, verTodo } = marcoItapua(L, m);
+      capaAerea(L, m, limites).addTo(m);
       L.control.scale({ imperial: false, position: "bottomleft" }).addTo(m);
       capas.current = {
         clima: L.imageOverlay(VACIO, [[-27.61, -57.05], [-26.09, -54.64]], { opacity: 0.72, pane: "clima", attribution: "Open-Meteo (CC BY 4.0)" }).addTo(m),
-        nombres: L.tileLayer(ESRI_NOMBRES, { maxNativeZoom: 17, maxZoom: 19, crossOrigin: true, updateWhenIdle: true, keepBuffer: 1, pane: "overlayPane" }),
-        zonas: L.layerGroup().addTo(m),
+        nombres: L.tileLayer(ESRI_NOMBRES, { maxNativeZoom: 17, maxZoom: 19, crossOrigin: true, ...OPCIONES_RAPIDAS, bounds: limites, pane: "overlayPane" }),
         nisar: L.layerGroup().addTo(m),
         chacra: L.layerGroup().addTo(m),
         nodos: L.layerGroup().addTo(m),
       };
-      m.setView([-26.9, -55.4], 9);
-      m.on("click", (e) => vivo.current.alElegirPunto(Number(e.latlng.lat.toFixed(4)), Number(e.latlng.lng.toFixed(4))));
+      verTodo();
+      // Tocar el mapa = ver el clima de ese lugar (solo dentro de Itapúa)
+      m.on("click", (e) => {
+        if (!dentroDeItapua(e.latlng.lng, e.latlng.lat)) {
+          setAviso(true);
+          window.setTimeout(() => setAviso(false), 5000);
+          return;
+        }
+        vivo.current.alElegirPunto(Number(e.latlng.lat.toFixed(4)), Number(e.latlng.lng.toFixed(4)));
+      });
       mapa.current = m;
       setListo(true);
     })();
@@ -117,30 +142,6 @@ export default function MapaClima({
       setListo(false);
     };
   }, []);
-
-  // ---------- Zonas de análisis: contorno; al cambiar de zona el mapa va hacia ella ----------
-  useEffect(() => {
-    const L = LRef.current;
-    const c = capas.current;
-    if (!listo || !L || !c) return;
-    c.zonas.clearLayers();
-    if (!apoyo.limites) return;
-    for (const a of areas) {
-      const [lo1, la1, lo2, la2] = a.bbox;
-      const sel = a.id === areaId;
-      L.rectangle([[la1, lo1], [la2, lo2]], { color: "#ffffff", weight: sel ? 3.5 : 1.5, dashArray: sel ? undefined : "6 6", opacity: sel ? 1 : 0.8, fill: false, interactive: false })
-        .addTo(c.zonas);
-    }
-  }, [listo, areas, areaId, apoyo.limites]);
-
-  useEffect(() => {
-    const L = LRef.current;
-    const m = mapa.current;
-    const a = areas.find((x) => x.id === areaId);
-    if (!listo || !L || !m || !a) return;
-    const [lo1, la1, lo2, la2] = a.bbox;
-    m.fitBounds([[la1, lo1], [la2, lo2]], { padding: [70, 70], maxZoom: 11 });
-  }, [listo, areas, areaId]);
 
   useEffect(() => {
     const c = capas.current;
@@ -171,8 +172,8 @@ export default function MapaClima({
     const dir = grilla?.h.dir_grados?.[pasoActual];
     const vel = grilla?.h.viento_kmh[pasoActual];
     if (!listo || !m || !cv || !grilla || !apoyo.viento || modo !== "h" || !dir || !vel) return;
-    return animarViento(m, cv, grilla, vel, dir);
-  }, [listo, grilla, apoyo.viento, modo, pasoActual]);
+    return animarViento(m, cv, grilla, vel, dir, dentroRapido);
+  }, [listo, grilla, apoyo.viento, modo, pasoActual, dentroRapido]);
 
   // ---------- Radar NISAR: imagen de la última pasada (si existe) + valor medio de cada zona ----------
   useEffect(() => {
@@ -184,20 +185,10 @@ export default function MapaClima({
     const ultimaFecha = indiceNisar?.fechas.at(-1);
     if (indiceNisar && ultimaFecha) {
       const [lo1, la1, lo2, la2] = indiceNisar.bbox;
-      L.imageOverlay(`/data/mapa_humedad/${ultimaFecha}.png`, [[la1, lo1], [la2, lo2]], { opacity: 0.65, pane: "clima", attribution: "NISAR (NASA-ISRO)" }).addTo(c.nisar);
+      L.imageOverlay(`/data/mapa_humedad/${ultimaFecha}.png`, [[la1, lo1], [la2, lo2]], { opacity: 0.7, pane: "clima", attribution: `NISAR (NASA-ISRO) · ${fecha(ultimaFecha, true)}` }).addTo(c.nisar);
     }
-    for (const a of areas) {
-      const ultima = a.serie.filter((p) => typeof p.humedad_m3m3 === "number").at(-1);
-      if (!ultima) continue;
-      const [lo1, la1, lo2, la2] = a.bbox;
-      const h = ultima.humedad_m3m3!;
-      const color = token(h < 0.2 ? "--agua-seco" : h < 0.35 ? "--agua-bueno" : "--agua-mojado") || "#3f9d57";
-      L.rectangle([[la1, lo1], [la2, lo2]], { color, weight: 2, fillColor: color, fillOpacity: ultimaFecha ? 0 : 0.35, interactive: false })
-        .bindTooltip(tc("nisarZona", { v: n(h, 2), dia: fecha(ultima.fecha) }), { permanent: true, direction: "center", className: "etiqueta-zona" })
-        .addTo(c.nisar);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- tc/n/fecha cambian con el idioma, que ya recrea los textos
-  }, [listo, apoyo.nisar, areas, indiceNisar]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `fecha` cambia con el idioma, que ya recrea los textos
+  }, [listo, apoyo.nisar, indiceNisar]);
 
   // ---------- Capa de clima: se repinta al cambiar la capa o el momento ----------
   useEffect(() => {
@@ -289,6 +280,12 @@ export default function MapaClima({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- los textos dependen del idioma, que cambia `lecturaPin` vía momento/rotulo
   }, [listo, posPin, lecturaPin, momento, modo]);
 
+  useEffect(() => {
+    const m = mapa.current;
+    if (!listo || !m || !posPin) return;
+    if (!m.getBounds().pad(-0.1).contains([posPin.lat, posPin.lon])) m.flyTo([posPin.lat, posPin.lon], Math.max(m.getZoom(), 10), { duration: 0.6 });
+  }, [listo, posPin]);
+
   // ---------- Reproducir ----------
   useEffect(() => {
     if (!reproduciendo || pasos < 2) return;
@@ -301,7 +298,6 @@ export default function MapaClima({
     setPaso(0);
   };
   const apoyos: { id: Apoyo; clave: ClaveClima; deshabilitado?: boolean }[] = [
-    { id: "limites", clave: "capaLimites" },
     { id: "chacra", clave: chacras.length ? "capaChacra" : "capaChacraSin", deshabilitado: !chacras.length },
     { id: "viento", clave: "capaVientoVivo", deshabilitado: !hayViento },
     { id: "nisar", clave: "capaNisar" },
@@ -321,21 +317,47 @@ export default function MapaClima({
         {/* Viento en movimiento: se dibuja encima del mapa y no recibe toques */}
         <canvas ref={lienzoViento} aria-hidden className={`pointer-events-none absolute inset-0 z-[1000] h-full w-full ${apoyo.viento && hayViento ? "" : "hidden"}`} />
 
-        {/* Capas de apoyo (izquierda, plegable) */}
-        <div className="absolute left-14 top-3 z-[1100]">
+        {/* Capas de clima: una fila de botones con nombre (se desliza con el dedo), como en los mapas de clima conocidos */}
+        <div role="radiogroup" aria-label={tc("capaClima")} className="slider-sin-barra absolute inset-x-0 top-0 z-[1100] flex gap-1.5 overflow-x-auto bg-gradient-to-b from-black/45 to-transparent px-2 pb-4 pt-2">
+          {CAPAS.map((c) => {
+            const activa = c.id === capa;
+            return (
+              <button
+                key={c.id}
+                type="button"
+                role="radio"
+                aria-checked={activa}
+                onClick={() => setCapa(c.id)}
+                className={`flex h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 text-sm font-bold shadow-suave ${
+                  activa ? "bg-primario text-sobre-primario" : "bg-barra text-texto"
+                }`}
+              >
+                <Icono nombre={c.icono} />
+                {tc(`capa_${c.id}`)}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Dónde estoy + capas de apoyo (izquierda, bajo la fila de capas) */}
+        <div className="absolute left-2 top-14 z-[1100] flex flex-col items-start gap-1.5">
+          {alPedirUbicacion && (
+            <button type="button" onClick={alPedirUbicacion} className="flex h-10 items-center gap-2 rounded-full bg-barra px-3.5 text-sm font-bold text-texto shadow-suave">
+              <span className="punto-ubicacion !h-3.5 !w-3.5 !border-2" aria-hidden />
+              {tc("dondeEstoy")}
+            </button>
+          )}
           <button
             type="button"
             onClick={() => setPanel((v) => !v)}
             aria-expanded={panel}
-            className="flex h-10 items-center gap-2 rounded-full bg-barra px-4 text-sm font-bold text-texto shadow-suave backdrop-blur"
+            className="flex h-10 items-center gap-2 rounded-full bg-barra px-3.5 text-sm font-bold text-texto shadow-suave"
           >
-            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden>
-              <path d="m12 3 9 5-9 5-9-5 9-5Zm-9 9 9 5 9-5M3 16l9 5 9-5" />
-            </svg>
+            <Icono nombre="capas" />
             {tc("capasBase")}
           </button>
           {panel && (
-            <fieldset className="mt-2 w-64 rounded-xl bg-barra p-3 text-sm font-bold text-texto shadow-suave backdrop-blur">
+            <fieldset className="w-64 rounded-xl bg-barra p-3 text-sm font-bold text-texto shadow-suave">
               <legend className="sr-only">{tc("capasBase")}</legend>
               {apoyos.map((a) => (
                 <label key={a.id} className={`flex min-h-9 items-center gap-2 ${a.deshabilitado ? "opacity-55" : ""}`}>
@@ -353,29 +375,11 @@ export default function MapaClima({
           )}
         </div>
 
-        {/* Capas de clima (derecha): íconos en el celular, ícono + nombre en pantallas grandes */}
-        <div role="radiogroup" aria-label={tc("capaClima")} className="absolute right-2 top-3 z-[1100] flex flex-col gap-1.5">
-          {CAPAS.map((c) => {
-            const activa = c.id === capa;
-            return (
-              <button
-                key={c.id}
-                type="button"
-                role="radio"
-                aria-checked={activa}
-                aria-label={tc(`capa_${c.id}`)}
-                title={tc(`capa_${c.id}`)}
-                onClick={() => setCapa(c.id)}
-                className={`flex h-10 items-center gap-2 rounded-full px-2.5 text-sm font-bold shadow-suave backdrop-blur md:px-3.5 ${
-                  activa ? "bg-primario text-sobre-primario" : "bg-barra text-texto"
-                }`}
-              >
-                <Icono nombre={c.icono} />
-                <span className="hidden md:inline">{tc(`capa_${c.id}`)}</span>
-              </button>
-            );
-          })}
-        </div>
+        {aviso && (
+          <p role="alert" className="absolute inset-x-3 top-28 z-[1100] mx-auto max-w-sm rounded-xl bg-black/85 px-4 py-3 text-center text-sm font-bold text-white">
+            {tc("fueraItapua")}
+          </p>
+        )}
 
         {/* Leyenda de la capa activa */}
         <div className="absolute bottom-3 right-2 z-[1100] w-[min(15rem,calc(100%-7rem))] rounded-xl bg-barra p-2.5 shadow-suave backdrop-blur">

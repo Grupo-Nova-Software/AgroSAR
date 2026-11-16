@@ -1,8 +1,11 @@
-// Servicio de clima: junta NASA POWER (histórico), Open-Meteo (pronóstico), la normal climatológica y la serie
-// NISAR SME2 del área, y arma la respuesta de GET /api/clima. Si una fuente falla, el resto se devuelve igual
+// Servicio de clima: junta NASA POWER (histórico), Open-Meteo (pronóstico), la normal climatológica y la humedad
+// NISAR SME2, y arma la respuesta de GET /api/clima. Si una fuente falla, el resto se devuelve igual
 // y `estado_fuentes` dice cuál faltó.
+// Vale para cualquier punto DENTRO de Itapúa. NISAR: con coordenada se usa la grilla real en ese punto (bloque de
+// 3 × 3 celdas = 600 m); sin coordenada (área "itapua"), el promedio del departamento.
 import type { SerieHumedad } from "@/types/contratos";
-import zonas from "../../../config/zonas/itapua.json";
+import { dentroDeItapua, ITAPUA_CENTRO, ITAPUA_ID } from "../itapua";
+import { cargarGrillas, fechasNisar, FUENTE_NISAR, humedadNisarBloque } from "../mapa/grilla-nisar";
 import { cargarTodas } from "../agro/datos";
 import { sumarDias } from "../agro/fechas";
 import type { CultivoConfig } from "../agro/tipos";
@@ -11,7 +14,7 @@ import {
   clasificarSequia, construirHistorico, detalleDiario, detalleHorario, evaluarHelada, extremosDelDia, lluviaDelDia,
   perspectivaEstacional, pulverizacionDelDia, resumirNisar, umbralCalorDe, ventanasSecas,
 } from "./motor-clima";
-import { AVISO_CLIMA, BBOX_CONSULTA, BBOX_ITAPUA, FUENTES, GRILLA, NODOS, NODOS_NOTA, REGLA_PULVERIZACION, ZONA_HORARIA } from "./supuestos";
+import { AVISO_CLIMA, BBOX_ITAPUA, FUENTES, GRILLA, NODOS, NODOS_NOTA, REGLA_PULVERIZACION, ZONA_HORARIA } from "./supuestos";
 import type { EstadoFuente, GrillaClima, RespuestaClima } from "./tipos";
 
 export class ErrorClima extends Error {
@@ -33,10 +36,9 @@ export function ahoraLocal(ahora = new Date()): { fecha: string; hora: string } 
 
 const dentro = (lon: number, lat: number, [lo1, la1, lo2, la2]: number[]) => lon >= lo1 && lon <= lo2 && lat >= la1 && lat <= la2;
 
-/** Centro de un área: el del distrito en config/zonas/itapua.json si existe; si no, el centro de su bbox. */
+/** Centro de un área: el centroide del departamento para "itapua"; si no, el centro de su bbox. */
 function centroDe(area: SerieHumedad): { lat: number; lon: number } {
-  const distrito = zonas.distritos.find((d) => d.id === area.id);
-  if (distrito) return { lon: distrito.centro[0], lat: distrito.centro[1] };
+  if (area.id === ITAPUA_ID) return { lon: ITAPUA_CENTRO[0], lat: ITAPUA_CENTRO[1] };
   const [lo1, la1, lo2, la2] = area.bbox;
   return { lon: (lo1 + lo2) / 2, lat: (la1 + la2) / 2 };
 }
@@ -51,6 +53,34 @@ function areaDelPunto(areas: SerieHumedad[], lat: number, lon: number): { area: 
     return (c.lat - lat) ** 2 + ((c.lon - lon) * Math.cos((lat * Math.PI) / 180)) ** 2;
   };
   return { area: [...areas].sort((a, b) => dist(a) - dist(b))[0] ?? null, dentro: false };
+}
+
+/**
+ * Serie NISAR real en un punto: promedio del bloque de 3 × 3 celdas (600 m) de cada pasada.
+ * null si no se pudo leer la tesela (se usa entonces el promedio del departamento y se avisa).
+ */
+async function serieNisarDelPunto(origen: string, lat: number, lon: number): Promise<SerieHumedad | null> {
+  await cargarGrillas(origen, [lon, lat, lon, lat]);
+  const fechas = fechasNisar([lon, lat]);
+  if (!fechas.length) return null;
+  const serie = fechas.map((fecha) => {
+    const b = humedadNisarBloque([lon, lat], fecha);
+    return {
+      fecha,
+      humedad_m3m3: b?.valor ?? null,
+      calidad: !b || b.celdas === 0 ? ("sin_dato" as const) : b.celdas >= 5 ? ("buena" as const) : ("dudosa" as const),
+      pixeles_validos: b?.celdas ?? 0,
+    };
+  });
+  return {
+    id: "punto",
+    zona: "punto",
+    tipo: "zona",
+    bbox: [lon, lat, lon, lat],
+    fuente: `${FUENTE_NISAR} · promedio de 3 × 3 celdas (600 m) alrededor del punto`,
+    es_ejemplo: false,
+    serie,
+  };
 }
 
 const mensaje = (e: unknown) => (e instanceof Error ? e.message : "error desconocido");
@@ -77,7 +107,7 @@ export async function analizarClima(q: ConsultaClima): Promise<RespuestaClima> {
   if (conCoordenada) {
     lat = q.lat!;
     lon = q.lon!;
-    if (!dentro(lon, lat, BBOX_CONSULTA)) throw new ErrorClima(400, "coordenada fuera de Itapúa (lat −28,5…−25,5 · lon −58…−54)");
+    if (!dentroDeItapua(lon, lat)) throw new ErrorClima(400, "ese punto está fuera de Itapúa: AgroSAR solo tiene datos del departamento de Itapúa (Paraguay)");
     const pedida = q.area ? areas.find((a) => a.id === q.area) : undefined;
     if (q.area && !pedida) throw new ErrorClima(404, `área '${q.area}' no encontrada`);
     const r = pedida ? { area: pedida, dentro: dentro(lon, lat, pedida.bbox) } : areaDelPunto(areas, lat, lon);
@@ -90,6 +120,9 @@ export async function analizarClima(q: ConsultaClima): Promise<RespuestaClima> {
     ({ lat, lon } = centroDe(area));
     dentroDeArea = true;
   }
+  // NISAR en el punto exacto (antes de redondear); si no se puede leer, queda el promedio del departamento
+  const nisarPunto = conCoordenada ? await serieNisarDelPunto(q.origen, lat, lon).catch(() => null) : null;
+  const serieNisar = nisarPunto ?? area;
   // 2 decimales (~1 km): suficiente para modelos de 10–50 km y hace que la caché sirva a chacras vecinas
   lat = Number(lat.toFixed(2));
   lon = Number(lon.toFixed(2));
@@ -111,7 +144,7 @@ export async function analizarClima(q: ConsultaClima): Promise<RespuestaClima> {
   const horario = pron ? detalleHorario(pron, hora, 48) : [];
   const diario = pron ? detalleDiario(pron, hoy, 14) : [];
   const historico = construirHistorico(power, pron, hoy, lat, 30);
-  const nisar = resumirNisar(area, q.cfg, hoy);
+  const nisar = resumirNisar(serieNisar, q.cfg, hoy);
   const umbralCalor = umbralCalorDe(q.cfg.id);
   const ultimoPower = power?.dias.filter((d) => d.mm !== null).at(-1)?.fecha ?? null;
 
@@ -129,6 +162,7 @@ export async function analizarClima(q: ConsultaClima): Promise<RespuestaClima> {
       area_id: area?.id ?? null,
       zona: area?.zona ?? null,
       dentro_de_area: dentroDeArea,
+      nisar_de: nisarPunto ? "punto" : "area",
       elevacion_m: power?.elevacion_m ?? pron?.elevacion_m ?? null,
     },
     cultivo: { id: q.cfg.id, nombre: q.cfg.nombre, nombre_en: q.cfg.nombre_en },
@@ -154,7 +188,7 @@ export async function analizarClima(q: ConsultaClima): Promise<RespuestaClima> {
     horario,
     diario,
     historico,
-    nisar_serie: (area?.serie ?? []).map((p) => ({ fecha: p.fecha, humedad_m3m3: p.humedad_m3m3, calidad: p.calidad })),
+    nisar_serie: (serieNisar?.serie ?? []).map((p) => ({ fecha: p.fecha, humedad_m3m3: p.humedad_m3m3, calidad: p.calidad })),
     fuentes: FUENTES,
   };
 }
