@@ -1,6 +1,6 @@
-# AgroSAR — NASA Space Apps Challenge 2026 submission (copy/paste text)
+# AgroSAR — NASA Space Apps Challenge 2026 submission (copy/paste text) · Team NOVA
 
-> Fill the 3 placeholders before submitting: `[VERCEL URL]`, `[REPOSITORY URL]`, `[DEMO LINK]`.
+> Only `[DEMO LINK]` is left: upload `AgroSAR_presentacion.pptx` to Google Drive / OneDrive ("Anyone with the link can view") and paste it.
 > Every field below is in English, as the competition requires.
 
 ---
@@ -15,8 +15,8 @@ AgroSAR is a mobile web app (installable on any phone) that tells small farmers 
 [DEMO LINK] — 7-slide presentation (`docs/entrega/AgroSAR_presentacion.pptx`, upload it to Google Drive / OneDrive as "Anyone with the link can view" and paste the link here).
 
 ## Link to the final project
-App: [VERCEL URL]
-Code: [REPOSITORY URL] (must be public, or paste the app link only if the repository is private)
+App: https://agro-sar.vercel.app/
+Code: https://github.com/Grupo-Nova-Software/AgroSAR
 
 ## Detailed project description
 
@@ -26,6 +26,8 @@ Code: [REPOSITORY URL] (must be public, or paste the app link only if the reposi
 - See how soil water has evolved over the 10 satellite passes in a simple chart.
 - Weather screen for all of Itapúa: today, tomorrow and the next days, plain advice, and a map with rain, temperature, wind and more.
 - The home screen summarises "today": sky, soil water measured by radar, and what to do with the chosen crop (soybean, maize or cassava).
+
+**Physical hypothesis behind the data.** Radar is sensitive to the dielectric constant: wet soil reflects more of the L-band signal back to the satellite (stronger backscatter) than dry soil, and L-band penetrates crop canopy better than shorter wavelengths. NISAR's SME2 product converts this into volumetric soil moisture; we also keep the HV backscatter (vegetation-sensitive) in each series.
 
 **How it works.**
 1. *Download:* 10 NISAR L3 SME2 granules over Itapúa (track 82), about 1.1 GB, soil moisture in m³/m³ on 200 m EASE-Grid 2.0 cells.
@@ -39,7 +41,7 @@ Code: [REPOSITORY URL] (must be public, or paste the app link only if the reposi
 
 **What we hope to achieve.** A tool cooperatives and extension technicians can put in farmers' hands, validated with local agronomists, and a method that extends to other regions and crops.
 
-**Honest limits.** NISAR SME2 is a provisional product (target accuracy 0.06 m³/m³). The latest pass we processed is 17 October 2026, so the app flags the data as old. The Dry/Good/Wet limits and sowing seasons are team assumptions and have not yet been validated by agronomists. The radar measures only the top ~5 cm of soil; deeper water is an estimate from rain and evaporation. We have not yet tested on a physical phone with real GPS.
+**Honest limits.** NISAR SME2 is a provisional product (target accuracy 0.06 m³/m³). The latest pass we processed is 17 October 2026, so the app flags the data as old. The Dry/Good/Wet limits and sowing seasons are team assumptions and have not yet been validated by agronomists. The radar measures only the top ~5 cm of soil; deeper water is an estimate from rain and evaporation. It has been tested by our team and mentors on several phones and tablets, but we have not run a formal field trial with farmers.
 
 **Tools.** Next.js 16 (App Router) + React 19 + TypeScript + Tailwind 4, Leaflet maps, deployed on Vercel; Python (h5py, numpy, asf_search) for the NISAR pipeline; service worker for offline use; ASF DAAC / NASA Earthdata for data download.
 
