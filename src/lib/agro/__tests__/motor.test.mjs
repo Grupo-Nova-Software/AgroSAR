@@ -17,7 +17,7 @@ const json = (p) => JSON.parse(readFileSync(new URL(p, import.meta.url), "utf8")
 const soja = json("../../../../config/cultivos/soja.json");
 const maiz = json("../../../../config/cultivos/maiz.json");
 const mandioca = json("../../../../config/cultivos/mandioca.json");
-const natalio = json("../../../../public/data/humedad/natalio.json");
+const itapua = json("../../../../public/data/humedad/itapua.json");
 
 // Serie ficticia mínima con un valor fijo de humedad.
 const serie = (valor, fechas = ["2026-10-01", "2026-10-05"]) => ({
@@ -198,13 +198,13 @@ test("motor: mandioca avisa malezas y heladas de invierno", () => {
   assert.ok(ids.includes("helada:invierno"));
 });
 
-test("motor: con la serie publicada de Natalio funciona para los 3 cultivos", () => {
+test("motor: con la serie publicada de Itapúa funciona para los 3 cultivos", () => {
   // La serie puede ser ficticia o NISAR real (rol Datos): el análisis hereda su marca y su fuente.
   for (const cfg of [soja, maiz, mandioca]) {
-    const a = analizar(cfg, natalio, {});
+    const a = analizar(cfg, itapua, {});
     assert.ok(["sembrar", "esperar", "precaucion"].includes(a.estado), cfg.id);
-    assert.equal(a.es_ejemplo, natalio.es_ejemplo);
-    assert.ok(a.fuentes.includes(natalio.fuente));
+    assert.equal(a.es_ejemplo, itapua.es_ejemplo);
+    assert.ok(a.fuentes.includes(itapua.fuente));
   }
 });
 
@@ -223,8 +223,8 @@ test("lote: un cuadrado de ~1 km² ≈ 100 ha y cae en su área", () => {
   const polys = leerPoligonos(poligono);
   const ha = hectareas(polys);
   assert.ok(ha > 90 && ha < 110, `ha=${ha}`);
-  const ub = ubicarLote(polys, [natalio]);
-  assert.equal(ub.serie.id, "natalio");
+  const ub = ubicarLote(polys, [itapua]);
+  assert.equal(ub.serie.id, "itapua");
   assert.equal(ub.dentro, true);
 });
 

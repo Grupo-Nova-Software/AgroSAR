@@ -15,33 +15,9 @@
  ],
  "zonas": [
   {
-   "id": "natalio",
-   "zona": "Natalio",
-   "archivo": "natalio.json",
-   "es_ejemplo": false
-  },
-  {
-   "id": "noreste",
-   "zona": "Noreste: Capitán Meza, Pirapó, Edelira",
-   "archivo": "noreste.json",
-   "es_ejemplo": false
-  },
-  {
-   "id": "obligado_hohenau_miranda",
-   "zona": "Obligado / Hohenau / Capitán Miranda",
-   "archivo": "obligado_hohenau_miranda.json",
-   "es_ejemplo": false
-  },
-  {
-   "id": "san_rafael_del_parana",
-   "zona": "San Rafael del Paraná",
-   "archivo": "san_rafael_del_parana.json",
-   "es_ejemplo": false
-  },
-  {
-   "id": "bella_vista",
-   "zona": "Bella Vista",
-   "archivo": "bella_vista.json",
+   "id": "itapua",
+   "zona": "Itapúa",
+   "archivo": "itapua.json",
    "es_ejemplo": false
   }
  ]

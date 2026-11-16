@@ -12,8 +12,9 @@
 //
 // Datos (sin inventar): `cielo` sale de /api/clima (Open-Meteo + NASA POWER, ver fondo/cielo.ts) y `humedad`
 // del estado de la última pasada NISAR. Sin datos: cielo despejado y sin halos de agua.
-import { memo, useEffect, useRef, type CSSProperties, type Ref } from "react";
-import { cieloActual, humedadDe, useClimaZona, type EstadoCielo, type HumedadFondo } from "./fondo/cielo";
+import { memo, useEffect, useRef, useSyncExternalStore, type CSSProperties, type Ref } from "react";
+import { calidadAhora, marcarFondoLento, medidorDeFluidez, sincronizarFondo, useCalidadFondo } from "./fondo/calidad";
+import { cieloActual, humedadDe, useClimaLugar, type EstadoCielo, type HumedadFondo, type PuntoLugar } from "./fondo/cielo";
 import {
   ASPECTO_AEREO,
   ASPECTO_RAICES,
@@ -59,18 +60,45 @@ function camaraVh(p: number) {
 }
 
 // Hilera de 4 plantas: 2 grandes a la izquierda/centro y 2 más jóvenes a la derecha (ritmo y perspectiva).
-const FILA = [
-  { x: 9, escala: 1, semilla: 11, espejo: false, brisa: "6.2s", demora: "0s" },
-  { x: 28, escala: 0.94, semilla: 23, espejo: true, brisa: "7.1s", demora: "-2.3s", soloGrande: true },
-  { x: 72, escala: 0.8, semilla: 37, espejo: false, brisa: "5.6s", demora: "-1.1s" },
-  { x: 91, escala: 0.72, semilla: 41, espejo: true, brisa: "6.6s", demora: "-3.4s", soloGrande: true },
-] as { x: number; escala: number; semilla: number; espejo: boolean; brisa: string; demora: string; soloGrande?: boolean }[];
+// En pantallas angostas (teléfono) se dibujan 2, en `xMovil`, y su tamaño se ajusta al ANCHO de la pantalla
+// (ver TAMANO): así siempre entra al menos una planta entera, de la punta a la raíz, sin quedar cortada por los bordes.
+interface Planta { x: number; xMovil?: number; escala: number; semilla: number; espejo: boolean; brisa: string; demora: string }
+const FILA: Planta[] = [
+  { x: 9, xMovil: 27, escala: 1, semilla: 11, espejo: false, brisa: "6.2s", demora: "0s" },
+  { x: 28, escala: 0.94, semilla: 23, espejo: true, brisa: "7.1s", demora: "-2.3s" },
+  { x: 72, xMovil: 77, escala: 0.8, semilla: 37, espejo: false, brisa: "5.6s", demora: "-1.1s" },
+  { x: 91, escala: 0.72, semilla: 41, espejo: true, brisa: "6.6s", demora: "-3.4s" },
+];
+/**
+ * Alto de cada dibujo: el de siempre (en % del alto de pantalla) o, si la pantalla es angosta, el que hace que
+ * el dibujo no ocupe más que una parte del ANCHO (en vw). El navegador elige el menor de los dos.
+ */
+const TAMANO = {
+  /** Planta: como mucho 46 % del ancho de la pantalla (alto = ancho / aspecto). */
+  aereo: (escala: number) => `min(${(ALTO_PLANTA * escala).toFixed(1)}vh, ${((46 / ASPECTO_AEREO) * escala).toFixed(1)}vw)`,
+  /** Raíces: como mucho 72 % del ancho. */
+  raices: (escala: number) => `min(${(110 + 40 * escala).toFixed(1)}vh, ${((72 / ASPECTO_RAICES) * escala).toFixed(1)}vw)`,
+};
 
 const CULTIVOS_FONDO = ["soja", "maiz", "mandioca", "trigo"] as const;
 
-/** Fondo con el clima real de la zona (Inicio y Mi suelo). En Clima se usa FondoCultivoScroll con sus datos. */
-export function FondoGlobal({ cultivo, zona }: { cultivo: CultivoFondo; zona: string | null }) {
-  const datos = useClimaZona(zona, cultivo === "trigo" ? "soja" : cultivo);
+/** ¿Pantalla angosta (teléfono)? En el servidor y al hidratar vale false; después se corrige sola. */
+const CONSULTA_ANGOSTO = "(max-width: 767px)";
+function useAngosto(): boolean {
+  return useSyncExternalStore(
+    (f) => {
+      const mq = window.matchMedia(CONSULTA_ANGOSTO);
+      mq.addEventListener("change", f);
+      return () => mq.removeEventListener("change", f);
+    },
+    () => window.matchMedia(CONSULTA_ANGOSTO).matches,
+    () => false,
+  );
+}
+
+/** Fondo con el clima real del lugar: el punto dado (la chacra) o, sin punto, el centro de Itapúa. */
+export function FondoGlobal({ cultivo, punto = null }: { cultivo: CultivoFondo; punto?: PuntoLugar | null }) {
+  const datos = useClimaLugar(punto, cultivo === "trigo" ? "soja" : cultivo);
   return <FondoCultivoScroll cultivoActivo={cultivo} cielo={cieloActual(datos) ?? "despejado"} humedad={humedadDe(datos)} />;
 }
 
@@ -85,21 +113,29 @@ export default function FondoCultivoScroll({
 }) {
   // Cualquier valor desconocido (p. ej. una chacra vieja guardada en el teléfono) se dibuja como soja.
   const cultivo: CultivoFondo = (CULTIVOS_FONDO as readonly string[]).includes(cultivoActivo) ? cultivoActivo : "soja";
-  const raizRef = useRef<HTMLDivElement>(null);
   const escenaRef = useRef<HTMLDivElement>(null);
   const medidorRef = useRef<HTMLDivElement>(null);
+  const calidad = useCalidadFondo();
+  const angosto = useAngosto();
+  const apagado = calidad === "apagado";
 
   useEffect(() => {
-    const raiz = raizRef.current;
+    sincronizarFondo();
+  }, []);
+
+  useEffect(() => {
+    if (apagado) return;
     const escena = escenaRef.current;
     const medidor = medidorRef.current;
-    if (!raiz || !escena || !medidor) return;
+    if (!escena || !medidor) return;
+    const medirFluidez = medidorDeFluidez(marcarFondoLento);
     const html = document.documentElement;
     const reducido = window.matchMedia("(prefers-reduced-motion: reduce)");
     let maxScroll = 0;
     let vh = window.innerHeight / 100;
     let marco = 0;
     let estratoPrevio = "";
+    let transformPrevio = "";
 
     const medir = () => {
       maxScroll = html.scrollHeight - window.innerHeight;
@@ -110,11 +146,18 @@ export default function FondoCultivoScroll({
       const hayScroll = maxScroll > 8;
       let p = hayScroll ? Math.min(1, Math.max(0, window.scrollY / maxScroll)) : 0;
       const estrato = ESTRATOS.find((e) => p < e.hasta) ?? ESTRATOS[2];
-      if (reducido.matches) p = estrato.fijo;
-      const valor = p.toFixed(4);
-      raiz.style.setProperty("--scroll-depth", valor);
-      medidor.style.setProperty("--scroll-depth", valor);
-      escena.style.transform = `translate3d(0, ${(-camaraVh(p) * vh).toFixed(1)}px, 0)`;
+      // Antes se escribía --scroll-depth en la raíz de la escena: eso obligaba al navegador a recalcular los estilos
+      // de sus ~1.000 elementos en CADA cuadro, y era lo que más trababa. Ahora solo la usa el medidor (8 elementos).
+      medidor.style.setProperty("--scroll-depth", p.toFixed(4));
+      // Calidad mínima o «menos movimiento»: la escena no sigue al dedo; salta de estrato (el CSS anima el salto).
+      const porEstratos = reducido.matches || calidadAhora() === "minimo";
+      if (porEstratos) p = estrato.fijo;
+      else medirFluidez(performance.now());
+      const destino = `translate3d(0, ${(-camaraVh(p) * vh).toFixed(1)}px, 0)`;
+      if (destino !== transformPrevio) {
+        transformPrevio = destino;
+        escena.style.transform = destino;
+      }
       medidor.style.visibility = hayScroll ? "visible" : "hidden";
       if (estrato.id !== estratoPrevio) {
         estratoPrevio = estrato.id;
@@ -145,14 +188,17 @@ export default function FondoCultivoScroll({
       obs.disconnect();
       delete html.dataset.estrato;
     };
-  }, []);
+  }, [apagado]);
+
+  // Apagado por el usuario: no se dibuja nada (ni se guarda en memoria una escena de 1.000 elementos).
+  if (apagado) return null;
 
   return (
     <>
-      <div ref={raizRef} aria-hidden data-cielo={cielo} className="fondo-escena pointer-events-none fixed inset-0 z-0 overflow-hidden">
+      <div aria-hidden data-cielo={cielo} className="fondo-escena pointer-events-none fixed inset-0 z-0 overflow-hidden">
         <Definiciones />
-        <div ref={escenaRef} className="absolute inset-x-0 top-0 will-change-transform" style={{ height: `${ALTO}vh` }}>
-          <Escenario cultivo={cultivo} cielo={cielo} humeda={humedad === "buena"} />
+        <div ref={escenaRef} className="fondo-camara absolute inset-x-0 top-0 will-change-transform" style={{ height: `${ALTO}vh` }}>
+          <Escenario cultivo={cultivo} cielo={cielo} humeda={humedad === "buena"} angosto={angosto} />
         </div>
         {/* Modo oscuro: la misma escena, en penumbra, para no encandilar ni competir con la interfaz */}
         <div className="agro-noche absolute inset-0" />
@@ -215,8 +261,13 @@ const Definiciones = memo(function Definiciones() {
 });
 
 // ================================================================== Escenario
-const Escenario = memo(function Escenario({ cultivo, cielo, humeda }: { cultivo: CultivoFondo; cielo: EstadoCielo; humeda: boolean }) {
+const Escenario = memo(function Escenario({ cultivo, cielo, humeda, angosto }: { cultivo: CultivoFondo; cielo: EstadoCielo; humeda: boolean; angosto: boolean }) {
   const llueve = cielo === "lluvia_suave" || cielo === "tormenta";
+  // En el teléfono: solo las plantas que tienen lugar propio (las otras ni se crean: menos memoria y menos trabajo)
+  const fila = angosto ? FILA.filter((f) => f.xMovil !== undefined) : FILA;
+  // La posición y el ocultado en pantallas angostas van por CSS (.fondo-planta), así no hay un salto al cargar.
+  const lugar = (f: Planta) => ({ "--x": `${f.x}%`, ...(f.xMovil !== undefined ? { "--x-movil": `${f.xMovil}%` } : {}) });
+  const clase = (f: Planta) => `fondo-planta absolute ${f.xMovil === undefined ? "max-md:hidden" : ""}`;
   return (
     <>
       <Cielo cielo={cielo} />
@@ -224,44 +275,52 @@ const Escenario = memo(function Escenario({ cultivo, cielo, humeda }: { cultivo:
       <Suelo humeda={humeda} />
       {llueve && <Infiltracion fuerte={cielo === "tormenta"} />}
       {/* Raíces (debajo de la línea del suelo) */}
-      {FILA.map((f) => {
-        const alto = 110 + 40 * f.escala; // las plantas grandes, más profundas
-        return (
+      {fila.map((f) => (
+        <svg
+          key={`r${f.semilla}`}
+          viewBox={VIEWBOX_RAICES}
+          overflow="visible"
+          className={clase(f)}
+          style={{
+            ...lugar(f),
+            "--alto": TAMANO.raices(f.escala), // las plantas grandes, más profundas
+            top: `${SUELO - 0.4}vh`,
+            height: "var(--alto)",
+            width: `calc(var(--alto) * ${ASPECTO_RAICES.toFixed(4)})`,
+            transform: "translateX(-50%)",
+          } as CSSProperties}
+        >
+          <g filter="url(#agro-trazo)" transform={f.espejo ? "scale(-1,1)" : undefined}>
+            <RaicesCultivo cultivo={cultivo} semilla={f.semilla} humeda={humeda || llueve} />
+          </g>
+        </svg>
+      ))}
+      {/* Parte aérea: cada planta se mece en su propia capa (más rápido con lluvia y viento) */}
+      {fila.map((f) => (
+        <div
+          key={`a${f.semilla}`}
+          className={clase(f)}
+          style={{
+            ...lugar(f),
+            "--alto": TAMANO.aereo(f.escala),
+            top: `calc(${SUELO}vh - var(--alto) * ${CUELLO_AEREO.toFixed(4)})`,
+            height: "var(--alto)",
+            width: `calc(var(--alto) * ${ASPECTO_AEREO.toFixed(4)})`,
+            transform: "translateX(-50%)",
+          } as CSSProperties}
+        >
           <svg
-            key={`r${f.semilla}`}
-            viewBox={VIEWBOX_RAICES}
+            viewBox={VIEWBOX_AEREO}
             overflow="visible"
-            className={`absolute ${f.soloGrande ? "max-md:hidden" : ""}`}
-            style={{ left: `${f.x}%`, top: `${SUELO - 0.4}vh`, height: `${alto}vh`, width: `${alto * ASPECTO_RAICES}vh`, transform: "translateX(-50%)" }}
+            className="agro-brisa h-full w-full"
+            style={{ "--brisa-dur": f.brisa, "--brisa-demora": f.demora, transformOrigin: `50% ${CUELLO_AEREO * 100}%` } as CSSProperties}
           >
             <g filter="url(#agro-trazo)" transform={f.espejo ? "scale(-1,1)" : undefined}>
-              <RaicesCultivo cultivo={cultivo} semilla={f.semilla} humeda={humeda || llueve} />
+              <PlantaAerea cultivo={cultivo} semilla={f.semilla} />
             </g>
           </svg>
-        );
-      })}
-      {/* Parte aérea: cada planta se mece en su propia capa (más rápido con lluvia y viento) */}
-      {FILA.map((f) => {
-        const alto = ALTO_PLANTA * f.escala;
-        return (
-          <div
-            key={`a${f.semilla}`}
-            className={`absolute ${f.soloGrande ? "max-md:hidden" : ""}`}
-            style={{ left: `${f.x}%`, top: `${SUELO - alto * CUELLO_AEREO}vh`, height: `${alto}vh`, width: `${alto * ASPECTO_AEREO}vh`, transform: "translateX(-50%)" }}
-          >
-            <svg
-              viewBox={VIEWBOX_AEREO}
-              overflow="visible"
-              className="agro-brisa h-full w-full"
-              style={{ "--brisa-dur": f.brisa, "--brisa-demora": f.demora, transformOrigin: `50% ${CUELLO_AEREO * 100}%` } as CSSProperties}
-            >
-              <g filter="url(#agro-trazo)" transform={f.espejo ? "scale(-1,1)" : undefined}>
-                <PlantaAerea cultivo={cultivo} semilla={f.semilla} />
-              </g>
-            </svg>
-          </div>
-        );
-      })}
+        </div>
+      ))}
       <CieloDelante cielo={cielo} />
     </>
   );

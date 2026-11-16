@@ -13,7 +13,7 @@ export interface PuntoSerie {
 export interface SerieHumedad {
   id: string;
   zona: string;
-  tipo?: "zona" | "distrito";
+  tipo?: "zona" | "distrito" | "departamento";
   bbox: [number, number, number, number]; // [lon_min, lat_min, lon_max, lat_max]
   fuente: string;
   es_ejemplo: boolean;

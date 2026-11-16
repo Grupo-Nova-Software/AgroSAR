@@ -5,6 +5,7 @@
 // leer() / escribir() pasan a sincronizar con la base, el resto de la app no se entera.
 import { useCallback, useEffect, useState } from "react";
 import type { PuntoSerie } from "@/types/contratos";
+import { todoDentroDeItapua } from "@/lib/itapua";
 import type { Analisis, LonLat } from "./suelo/api";
 
 export interface ResultadoGuardado {
@@ -107,21 +108,14 @@ export function useChacras() {
   return { chacras, cargadas, agregar, actualizar, borrar };
 }
 
-// ---------- Última ubicación conocida (para abrir el mapa ahí aunque el GPS tarde) ----------
-const CLAVE_UBIC = "agrosar.ubicacion";
-export function leerUltimaUbicacion(): LonLat | null {
-  try {
-    const v = JSON.parse(localStorage.getItem(CLAVE_UBIC) ?? "null");
-    return Array.isArray(v) && v.length === 2 ? (v as LonLat) : null;
-  } catch {
-    return null;
-  }
-}
-export function guardarUbicacion(p: LonLat) {
-  try {
-    localStorage.setItem(CLAVE_UBIC, JSON.stringify(p));
-  } catch {}
-}
+/** Chacras guardadas antes de limitar la app a Itapúa (o marcadas por error): no tienen datos. */
+export const fueraDeItapua = (c: Pick<Chacra, "vertices">) => !todoDentroDeItapua(c.vertices);
+
+/** Centro de la chacra { lat, lon } (promedio de sus esquinas), con 4 decimales (~10 m). */
+export const centroDeChacra = (c: Pick<Chacra, "vertices">) => ({
+  lat: Number((c.vertices.reduce((s, v) => s + v[1], 0) / c.vertices.length).toFixed(4)),
+  lon: Number((c.vertices.reduce((s, v) => s + v[0], 0) / c.vertices.length).toFixed(4)),
+});
 
 // ---------- Conexión ----------
 export function useEnLinea() {

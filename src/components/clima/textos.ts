@@ -71,12 +71,14 @@ const T = {
 
   // Mapa
   mapaTitulo: { es: "Mapa del clima", en: "Weather map" },
-  mapaAyuda: { es: "Tocá el mapa para ver el clima en tu chacra.", en: "Tap the map to see the weather at your field." },
+  mapaAyuda: { es: "Tocá cualquier lugar de Itapúa para ver su clima.", en: "Tap anywhere in Itapúa to see its weather." },
   capasBase: { es: "Capas", en: "Layers" },
+  dondeEstoy: { es: "Dónde estoy", en: "Where I am" },
+  fueraItapua: { es: "Eso está fuera de Itapúa. AgroSAR solo tiene datos de Itapúa.", en: "That is outside Itapúa. AgroSAR only has data for Itapúa." },
   capaLimites: { es: "Zonas de análisis", en: "Analysis zones" },
-  capaChacra: { es: "Mi chacra", en: "My field" },
-  capaChacraSin: { es: "Mi chacra (marcala en «Mi suelo»)", en: "My field (mark it in «My soil»)" },
-  capaNisar: { es: "Radar NISAR SME2 (200 m)", en: "NISAR SME2 radar (200 m)" },
+  capaChacra: { es: "Mis chacras", en: "My fields" },
+  capaChacraSin: { es: "Mis chacras (marcalas en «Mi suelo»)", en: "My fields (mark them in «My soil»)" },
+  capaNisar: { es: "Agua del suelo: radar NISAR (última pasada)", en: "Soil water: NISAR radar (latest pass)" },
   capaNodos: { es: "Puntos de referencia", en: "Reference points" },
   capaNombres: { es: "Nombres de lugares", en: "Place names" },
   capaClima: { es: "Capa de clima", en: "Weather layer" },

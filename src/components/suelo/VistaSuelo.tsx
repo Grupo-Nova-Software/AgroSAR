@@ -1,22 +1,21 @@
 "use client";
-// Pantalla "Mi suelo": el mapa aéreo grande arriba; abajo, el cartel de recomendación y el gráfico.
-// El agricultor puede marcar varias chacras (guardadas en el teléfono, ver chacras.ts). Al guardar una,
-// la pantalla baja sola hasta el resultado; si el resultado queda fuera de la vista, aparece un botón para ir.
-// Datos: /data/humedad/*.json (rol Datos) + /api/ranking, /api/analisis, /api/lote, /api/cultivos (rol Backend).
+// Pantalla "Mi suelo": el mapa aéreo de Itapúa arriba; abajo, el cartel de recomendación y el gráfico.
+// El agricultor puede marcar varias chacras en cualquier lugar de Itapúa (guardadas en el teléfono, ver chacras.ts).
+// Al guardar una, la pantalla baja sola hasta el resultado; si queda fuera de la vista, aparece un botón para ir.
+// Sin chacra elegida se muestra el promedio de todo el departamento.
+// Datos: /data/humedad/itapua.json (rol Datos) + /api/analisis, /api/lote, /api/cultivos (rol Backend).
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import type { EstadoRecomendacion, IndiceHumedad, SerieHumedad } from "@/types/contratos";
-import { claveDe, useChacras } from "../chacras";
+import type { SerieHumedad } from "@/types/contratos";
+import { ITAPUA_ID } from "@/lib/itapua";
+import { centroDeChacra, claveDe, fueraDeItapua, useChacras } from "../chacras";
 import { CULTIVOS } from "../cultivos";
 import { FondoGlobal } from "../FondoCultivoScroll";
 import { useIdioma } from "../idioma";
 import Icono from "../Icono";
 import Marco from "../Marco";
-import { useCultivoGuardado, useZonaGuardada } from "../preferencias";
-import {
-  dentroDe, hectareasDe, pedirAnalisis, pedirEstados, pedirUmbrales,
-  UMBRALES_DEFECTO, type Analisis, type LonLat, type UmbralesHumedad,
-} from "./api";
+import { useCultivoGuardado } from "../preferencias";
+import { hectareasDe, pedirAnalisis, pedirUmbrales, UMBRALES_DEFECTO, type Analisis, type LonLat, type UmbralesHumedad } from "./api";
 import Consejo from "./Consejo";
 import EditorChacra from "./EditorChacra";
 import GraficoHumedad from "./GraficoHumedad";
@@ -27,11 +26,11 @@ type Cultivo = (typeof CULTIVOS)[number]["id"];
 
 export default function VistaSuelo({
   cultivo: cultivoParam,
-  area: areaParam,
   chacra: chacraParam,
   nueva = false,
 }: {
   cultivo?: string;
+  /** Ya no hay zonas: se acepta el parámetro para que los enlaces viejos no fallen, pero no se usa. */
   area?: string;
   chacra?: string;
   nueva?: boolean;
@@ -41,84 +40,63 @@ export default function VistaSuelo({
   const { chacras, cargadas, agregar, actualizar, borrar } = useChacras();
   const { pendientes, enLinea } = useResultados(chacras, actualizar);
 
-  // Cultivo y zona compartidos con Inicio y Clima: la URL manda; sin parámetros, el último elegido.
+  // Cultivo compartido con Inicio y Clima: la URL manda; sin parámetros, el último elegido.
   const [cultivoGuardado, guardarCultivo] = useCultivoGuardado();
-  const [zonaGuardada, guardarZona] = useZonaGuardada();
 
   // Chacra a mostrar: la pedida en la URL; si no, la primera que siembra el cultivo elegido.
   const cultivoUrl = CULTIVOS.find((c) => c.id === cultivoParam)?.id;
   const cultivoElegido = cultivoUrl ?? cultivoGuardado ?? undefined;
   const chacra =
     chacras.find((c) => c.id === chacraParam) ??
-    (chacraParam === "ninguna" || areaParam ? undefined : chacras.find((c) => !cultivoElegido || c.cultivo === cultivoElegido));
+    (chacraParam === "ninguna" ? undefined : chacras.find((c) => !cultivoElegido || c.cultivo === cultivoElegido));
   const cultivo: Cultivo = chacra?.cultivo ?? cultivoElegido ?? "soja";
   const cultivoCfg = CULTIVOS.find((c) => c.id === cultivo)!;
+  const chacraFuera = !!chacra && fueraDeItapua(chacra);
 
-  const [areas, setAreas] = useState<SerieHumedad[]>([]);
-  const [estados, setEstados] = useState<Record<string, EstadoRecomendacion>>({});
+  const [itapua, setItapua] = useState<SerieHumedad | null>(null);
   const [umbrales, setUmbrales] = useState<{ cultivo: string; u: UmbralesHumedad }>({ cultivo: "", u: UMBRALES_DEFECTO });
   const [analisis, setAnalisis] = useState<{ clave: string; datos: Analisis } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [recienGuardada, setRecienGuardada] = useState<string | null>(null);
-  const valida = (z: string | null | undefined) => !!z && areas.some((a) => a.id === z);
-  const areaId = (valida(areaParam) ? areaParam : valida(zonaGuardada) ? zonaGuardada : areas[0]?.id) ?? "";
 
-  // Lo que el usuario elige acá (cultivo o chacra en la URL, zona) pasa a Inicio y Clima.
+  // Lo que el usuario elige acá (cultivo o chacra en la URL) pasa a Inicio y Clima.
   const eligioCultivo = !!(cultivoUrl || (chacraParam && chacra));
   useEffect(() => {
     if (eligioCultivo) guardarCultivo(cultivo);
   }, [eligioCultivo, cultivo, guardarCultivo]);
-  useEffect(() => {
-    if (areaParam && valida(areaParam)) guardarZona(areaParam);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- `valida` depende de `areas`
-  }, [areaParam, areas, guardarZona]);
 
   const ir = (p: Record<string, string>) => router.replace(`/suelo?${new URLSearchParams(p).toString()}`, { scroll: false });
-  const elegirZona = (id: string) => ir({ cultivo, area: id, chacra: "ninguna" });
   const elegirChacra = (id: string) => ir({ chacra: id });
 
-  // Áreas y series NISAR (una vez)
+  // Serie NISAR de todo Itapúa (una vez): es el gráfico cuando no hay chacra elegida
   useEffect(() => {
-    (async () => {
-      try {
-        const indice: IndiceHumedad = await (await fetch("/data/humedad/index.json")).json();
-        setAreas(await Promise.all(indice.zonas.map(async (z) => (await fetch(`/data/humedad/${z.archivo}`)).json())));
-      } catch (e) {
-        setError((e as Error).message);
-      }
-    })();
+    fetch(`/data/humedad/${ITAPUA_ID}.json`)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+      .then(setItapua)
+      .catch((e) => setError((e as Error).message));
   }, []);
 
-  // Por cultivo: estado de cada zona y límites de seco / bueno / mojado
+  // Por cultivo: límites de seco / bueno / mojado
   useEffect(() => {
     let vigente = true;
-    pedirEstados(cultivo).then((e) => vigente && setEstados(e)).catch(() => {});
     pedirUmbrales(cultivo).then((u) => vigente && setUmbrales({ cultivo, u }));
     return () => {
       vigente = false;
     };
   }, [cultivo]);
 
-  // Análisis de la zona (solo si no se está mirando una chacra)
-  const claveZona = `${areaId}|${cultivo}`;
+  // Análisis de todo Itapúa (solo si no se está mirando una chacra)
+  const claveItapua = `${ITAPUA_ID}|${cultivo}`;
   useEffect(() => {
-    if (!areaId || chacra) return;
+    if (chacra) return;
     let vigente = true;
-    pedirAnalisis(areaId, cultivo)
-      .then((a) => vigente && setAnalisis({ clave: `${areaId}|${cultivo}`, datos: a }))
+    pedirAnalisis(ITAPUA_ID, cultivo)
+      .then((a) => vigente && setAnalisis({ clave: `${ITAPUA_ID}|${cultivo}`, datos: a }))
       .catch((e) => vigente && setError(enLinea ? (e as Error).message : null));
     return () => {
       vigente = false;
     };
-  }, [areaId, cultivo, chacra, enLinea]);
-
-  // Si el usuario está dentro de una zona y no tiene chacras, se elige su zona (la más chica que lo contenga).
-  const alUbicar = (p: LonLat) => {
-    if (areaParam || chacras.length) return;
-    const tam = (a: SerieHumedad) => (a.bbox[2] - a.bbox[0]) * (a.bbox[3] - a.bbox[1]);
-    const suya = areas.filter((a) => dentroDe(p, a.bbox)).sort((a, b) => tam(a) - tam(b))[0];
-    if (suya && suya.id !== areaId) ir({ cultivo, area: suya.id });
-  };
+  }, [cultivo, chacra, enLinea]);
 
   const alGuardarChacra = (vertices: LonLat[], editandoId: string | null) => {
     if (editandoId) {
@@ -155,8 +133,7 @@ export default function VistaSuelo({
     };
   }, [resultadoListo]);
 
-  const area = areas.find((a) => a.id === areaId);
-  const analisisZona = analisis?.clave === claveZona ? analisis.datos : undefined;
+  const analisisItapua = analisis?.clave === claveItapua ? analisis.datos : undefined;
   const u = umbrales.cultivo === cultivo ? umbrales.u : UMBRALES_DEFECTO;
   const enFrase = tr(cultivoCfg.enFrase);
   const num = (n: number) => n.toLocaleString(idioma === "es" ? "es-PY" : "en-US", { maximumFractionDigits: n < 10 ? 1 : 0 });
@@ -176,45 +153,24 @@ export default function VistaSuelo({
       )}
       {!enLinea && !res && <p className="mt-2 rounded-xl bg-dorado/25 px-4 py-2 text-base font-bold">{t("sinResultado")}</p>}
       {enLinea && pendientes.has(chacra.id) && res && !resActual && <p className="mt-2 text-base font-bold text-texto-suave">{t("actualizando")}</p>}
-      {chacraSinDatoReal && <p className="mt-2 rounded-xl bg-dorado/25 px-4 py-2 text-base font-bold">{t("sinDatosAqui")}</p>}
+      {chacraFuera && <p className="mt-2 rounded-xl bg-peligro/15 px-4 py-3 text-base font-bold text-peligro">{t("chacraFuera")}</p>}
+      {!chacraFuera && chacraSinDatoReal && <p className="mt-2 rounded-xl bg-dorado/25 px-4 py-2 text-base font-bold">{t("sinDatosAqui")}</p>}
     </>
   );
 
-  const selectorZona = (
-    <label className="mt-2 flex items-center gap-2 text-base font-bold text-texto-suave">
-      {t("zona")}
-      <select
-        value={areaId}
-        onChange={(e) => elegirZona(e.target.value)}
-        className="h-12 min-w-0 flex-1 rounded-xl border border-borde bg-tarjeta-2 px-3 text-base font-bold text-texto"
-      >
-        {areas.map((a) => (
-          <option key={a.id} value={a.id}>
-            {a.zona}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
-
-  const serieGrafico = chacra ? (res?.serie?.length ? res.serie : null) : (area?.serie ?? null);
+  const serieGrafico = chacra ? (res?.serie?.length ? res.serie : null) : (itapua?.serie ?? null);
 
   return (
-    <Marco variante="compacta" cultivo={cultivo} fondo={<FondoGlobal cultivo={cultivo} zona={areaId || zonaGuardada} />}>
+    <Marco variante="compacta" cultivo={cultivo} fondo={<FondoGlobal cultivo={cultivo} punto={chacra && !chacraFuera ? centroDeChacra(chacra) : null} />}>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-5 md:gap-5 md:px-8">
         <div className="min-w-0 md:col-span-3">
-          {areas.length && cargadas ? (
+          {cargadas ? (
             <MapaCampo
-              areas={areas}
-              estados={estados}
-              seleccionada={chacra ? "" : areaId}
-              alSeleccionar={elegirZona}
               chacras={chacras}
               chacraSel={chacra?.id ?? null}
               alElegirChacra={elegirChacra}
               alGuardarChacra={alGuardarChacra}
               dibujarAlAbrir={nueva}
-              alUbicar={alUbicar}
             />
           ) : (
             <div className="grid h-[62svh] min-h-[22rem] place-items-center bg-tarjeta text-lg text-texto-suave md:h-[34rem] md:rounded-2xl">
@@ -231,7 +187,8 @@ export default function VistaSuelo({
               key={chacra.id}
               titulo={`${chacra.nombre} · ${num(hectareasDe(chacra.vertices))} ${t("ha")}`}
               marca={chacra.color}
-              analisis={res?.analisis}
+              analisis={chacraFuera ? undefined : res?.analisis}
+              sinDatos={chacraFuera}
               umbrales={u}
               cultivo={enFrase}
               aviso={avisoChacra}
@@ -248,10 +205,8 @@ export default function VistaSuelo({
             />
           ) : (
             <>
-              <Consejo titulo={`${t("zonaDe")} ${area?.zona ?? ""}`} analisis={analisisZona} umbrales={u} cultivo={enFrase}>
-                {selectorZona}
-              </Consejo>
-              <p className="px-1 text-sm text-texto-suave">{chacras.length ? t("elegirChacra") : t("pistaChacra")}</p>
+              <Consejo titulo={t("todoItapua")} subtitulo={t("promedioItapua")} analisis={analisisItapua} umbrales={u} cultivo={enFrase} />
+              {chacras.length > 0 && <p className="px-1 text-sm text-texto-suave">{t("elegirChacra")}</p>}
             </>
           )}
         </div>
@@ -266,7 +221,7 @@ export default function VistaSuelo({
       </div>
 
       {/* Botón para bajar al resultado cuando no se ve (gente que no sabe que tiene que deslizar) */}
-      {!resultadoVisible && (chacra ? res : analisisZona) && (
+      {!resultadoVisible && (chacra ? res && !chacraFuera : analisisItapua) && (
         <button
           type="button"
           onClick={bajarAlResultado}

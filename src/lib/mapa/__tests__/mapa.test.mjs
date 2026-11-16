@@ -128,3 +128,58 @@ test("grilla NISAR: las celdas y la serie del lote usan la humedad real y quedan
     _registrarGrilla(null);
   }
 });
+
+// ---------- Itapúa completo: contorno y teselas ----------
+import { dentroDeItapua, todoDentroDeItapua, ITAPUA_BBOX, ITAPUA_CENTRO } from "../../itapua.ts";
+import { decodificarTesela, humedadNisarBloque, hayGrillaEn } from "../grilla-nisar.ts";
+
+test("Itapúa: el contorno deja adentro a sus ciudades y afuera a todo lo demás", () => {
+  const adentro = { Encarnacion: [-55.87, -27.33], Hohenau: [-55.64, -27.075], Natalio: [-55.137, -26.756], "San Rafael del Paraná": [-54.93, -26.67], "Coronel Bogado": [-56.24, -27.16] };
+  for (const [nombre, [lon, lat]] of Object.entries(adentro)) assert.equal(dentroDeItapua(lon, lat), true, nombre);
+  const afuera = { Asuncion: [-57.58, -25.28], "Posadas (Argentina)": [-55.9, -27.42], "Ciudad del Este": [-54.61, -25.51], Alaska: [-149.9, 61.2], "Pilar (Ñeembucú)": [-58.3, -26.86] };
+  for (const [nombre, [lon, lat]] of Object.entries(afuera)) assert.equal(dentroDeItapua(lon, lat), false, nombre);
+  assert.equal(dentroDeItapua(...ITAPUA_CENTRO), true);
+  assert.ok(ITAPUA_BBOX[0] < ITAPUA_BBOX[2] && ITAPUA_BBOX[1] < ITAPUA_BBOX[3]);
+  // Una chacra con una esquina en Argentina no vale
+  assert.equal(todoDentroDeItapua([[-55.87, -27.33], [-55.86, -27.33], [-55.9, -27.42]]), false);
+});
+
+test("teselas NISAR: cubren Itapúa, se decodifican y dan valores reales plausibles", () => {
+  const base = new URL("../../../../public/data/grilla/", import.meta.url);
+  const indice = JSON.parse(readFileSync(new URL("index.json", base), "utf8"));
+  assert.equal(indice.es_ejemplo, false);
+  assert.ok(indice.areas.length >= 30, "pocas teselas");
+  assert.equal(indice.fechas.length, 10);
+  // Cada ciudad cae en una tesela del índice
+  const p = [-55.64, -27.075]; // Hohenau
+  const entrada = indice.areas.find((a) => p[0] >= a.bbox[0] && p[0] <= a.bbox[2] && p[1] >= a.bbox[1] && p[1] <= a.bbox[3]);
+  assert.ok(entrada, "ninguna tesela contiene a Hohenau");
+  const cruda = JSON.parse(readFileSync(new URL(entrada.archivo, base), "utf8"));
+  const g = decodificarTesela(cruda);
+  assert.equal(g.lat.length, entrada.filas);
+  assert.equal(g.lon.length, entrada.columnas);
+  assert.deepEqual(g.fechas, indice.fechas);
+  const valores = g.humedad["2026-10-17"].flat().filter((v) => v !== null);
+  assert.ok(valores.length > 1000, "tesela casi vacía");
+  assert.ok(valores.every((v) => v >= 0 && v <= 1), "humedad fuera de 0–1 m³/m³");
+  _registrarGrilla(g);
+  try {
+    assert.equal(hayGrillaEn(p), true);
+    const b = humedadNisarBloque(p, "2026-10-17");
+    assert.ok(b && b.celdas > 0 && b.valor > 0.02 && b.valor < 0.6, JSON.stringify(b));
+    assert.equal(humedadNisarBloque(p, "2026-01-01"), null); // fecha sin pasada
+  } finally {
+    _registrarGrilla(null);
+  }
+});
+
+test("chacras: sin dato NISAR la celda queda sin dato (nunca humedad ficticia)", () => {
+  const d = DISTRITOS[0];
+  const c = construirCelda(10, 10, 200, "2026-10-20", null, d, "cultivo", true);
+  assert.equal(c.humedad_m3m3, null);
+  assert.equal(c.humedad_estado, "sin_datos");
+  assert.equal(c.fuente_humedad, "nisar");
+  const s = serieDeCeldas("lote", "x", d.bbox, [c], "2026-10-20", true);
+  assert.equal(s.es_ejemplo, false);
+  assert.deepEqual(s.serie, []);
+});

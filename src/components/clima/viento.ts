@@ -6,7 +6,15 @@ import type { Map as LMap } from "leaflet";
 import type { GrillaClima } from "@/lib/clima/tipos";
 import { interpolar } from "./escalas";
 
-export function animarViento(m: LMap, cv: HTMLCanvasElement, g: GrillaClima, velKmh: number[], dirGrados: number[]): () => void {
+export function animarViento(
+  m: LMap,
+  cv: HTMLCanvasElement,
+  g: GrillaClima,
+  velKmh: number[],
+  dirGrados: number[],
+  /** Dónde dibujar (p. ej. solo dentro de Itapúa). Sin esto, en toda la grilla. */
+  dentro?: (lat: number, lon: number) => boolean,
+): () => void {
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return () => {};
   const ctx = cv.getContext("2d");
   if (!ctx) return () => {};
@@ -71,7 +79,7 @@ export function animarViento(m: LMap, cv: HTMLCanvasElement, g: GrillaClima, vel
     ctx.beginPath();
     for (const p of ps) {
       const ll = m.containerPointToLatLng([p.x, p.y]);
-      const fuera = ll.lng < lo1 || ll.lng > lo2 || ll.lat < la1 || ll.lat > la2;
+      const fuera = ll.lng < lo1 || ll.lng > lo2 || ll.lat < la1 || ll.lat > la2 || (dentro ? !dentro(ll.lat, ll.lng) : false);
       const uu = fuera ? null : interpolar(u, g, ll.lat, ll.lng);
       const vv = fuera ? null : interpolar(v, g, ll.lat, ll.lng);
       if (uu === null || vv === null || p.edad++ > VIDA) {

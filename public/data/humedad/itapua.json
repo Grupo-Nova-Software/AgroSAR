@@ -1,0 +1,86 @@
+{
+ "id": "itapua",
+ "zona": "Itapúa",
+ "tipo": "departamento",
+ "bbox": [
+  -57.04299,
+  -27.60639,
+  -54.64882,
+  -26.09216
+ ],
+ "fuente": "NISAR L3 SME2 (provisional) · NASA-ISRO · ASF DAAC",
+ "es_ejemplo": false,
+ "mascara": "Celdas de 200 m dentro del contorno de Itapúa (OpenStreetMap), con retrievalQualityFlag 'recomendado' y sin agua (waterbodyFraction ≤ 0.5); si hay menos de 50, todas las válidas (calidad 'dudosa').",
+ "serie": [
+  {
+   "fecha": "2026-06-19",
+   "humedad_m3m3": 0.298,
+   "hv_db": -16.8,
+   "calidad": "buena",
+   "pixeles_validos": 227207
+  },
+  {
+   "fecha": "2026-07-01",
+   "humedad_m3m3": 0.292,
+   "hv_db": -17.0,
+   "calidad": "buena",
+   "pixeles_validos": 101750
+  },
+  {
+   "fecha": "2026-07-13",
+   "humedad_m3m3": 0.287,
+   "hv_db": -17.4,
+   "calidad": "buena",
+   "pixeles_validos": 226730
+  },
+  {
+   "fecha": "2026-07-25",
+   "humedad_m3m3": 0.277,
+   "hv_db": -17.2,
+   "calidad": "buena",
+   "pixeles_validos": 227531
+  },
+  {
+   "fecha": "2026-08-18",
+   "humedad_m3m3": 0.248,
+   "hv_db": -18.8,
+   "calidad": "buena",
+   "pixeles_validos": 232366
+  },
+  {
+   "fecha": "2026-08-30",
+   "humedad_m3m3": 0.219,
+   "hv_db": -19.3,
+   "calidad": "buena",
+   "pixeles_validos": 232030
+  },
+  {
+   "fecha": "2026-09-11",
+   "humedad_m3m3": 0.274,
+   "hv_db": -18.2,
+   "calidad": "buena",
+   "pixeles_validos": 234214
+  },
+  {
+   "fecha": "2026-09-23",
+   "humedad_m3m3": 0.23,
+   "hv_db": -19.5,
+   "calidad": "buena",
+   "pixeles_validos": 234908
+  },
+  {
+   "fecha": "2026-10-05",
+   "humedad_m3m3": 0.249,
+   "hv_db": -17.9,
+   "calidad": "buena",
+   "pixeles_validos": 233046
+  },
+  {
+   "fecha": "2026-10-17",
+   "humedad_m3m3": 0.223,
+   "hv_db": -18.9,
+   "calidad": "buena",
+   "pixeles_validos": 230594
+  }
+ ]
+}

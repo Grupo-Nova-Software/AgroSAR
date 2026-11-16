@@ -16,13 +16,16 @@ export function fechasObservacion(hasta: string, desde = INICIO_NISAR, paso = PA
   return out;
 }
 
-export function serieDeCeldas(id: string, zona: string, bbox: BBox, celdas: Celda[], hasta: string): SerieHumedad {
+/** `soloReal`: para las chacras. Si no hay pasadas NISAR para esas celdas, la serie queda vacía (no se genera una ficticia). */
+export function serieDeCeldas(id: string, zona: string, bbox: BBox, celdas: Celda[], hasta: string, soloReal = false): SerieHumedad {
   const utiles = celdas.filter((c) => c.cobertura !== "agua" && c.cobertura !== "urbano");
   const base = utiles.length ? utiles : celdas;
 
   // REAL: si hay grilla NISAR publicada para estas celdas, la serie usa las fechas reales de paso del satélite.
-  const fechasReales = celdas.length ? fechasNisar(celdas[0].centro).filter((f) => f <= hasta) : [];
-  if (fechasReales.length) {
+  // (la primera celda que tenga tesela: en el borde de Itapúa alguna puede caer fuera de la grilla publicada)
+  const conGrilla = celdas.map((c) => fechasNisar(c.centro)).find((f) => f.length) ?? [];
+  const fechasReales = conGrilla.filter((f) => f <= hasta);
+  if (fechasReales.length || soloReal) {
     const serieReal = fechasReales.map((fecha) => {
       const vals = celdas.map((c) => humedadNisar(c.centro, fecha, true)?.valor).filter((v): v is number => typeof v === "number");
       if (!vals.length) return { fecha, humedad_m3m3: null, calidad: "sin_dato" as const };

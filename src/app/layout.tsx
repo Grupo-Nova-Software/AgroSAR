@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Atkinson_Hyperlegible, Bricolage_Grotesque } from "next/font/google";
+import { SCRIPT_FONDO } from "@/components/fondo/calidad";
 import { IdiomaProvider } from "@/components/idioma";
 import RegistrarSW from "@/components/RegistrarSW";
 import { SCRIPT_TEMA, TemaProvider } from "@/components/tema";
@@ -28,7 +29,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="es" suppressHydrationWarning className={`${titulo.variable} ${texto.variable} h-full antialiased`}>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: SCRIPT_TEMA }} />
+        <script dangerouslySetInnerHTML={{ __html: `${SCRIPT_TEMA};${SCRIPT_FONDO}` }} />
       </head>
       <body className="flex min-h-full flex-col">
         <TemaProvider>
